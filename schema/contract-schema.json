@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://watch.internal/schema/contract-schema.json",
+  "title": "Watch Data Contract",
+  "description": "Schema for data contract YAML files describing pipeline outputs and consumer agreements.",
+  "type": "object",
+  "required": ["contract_id", "pipeline_id", "owner", "output_schema", "consumers"],
+  "additionalProperties": false,
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Globally unique contract identifier (e.g. contract-customer-360-v1)."
+    },
+    "pipeline_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The pipeline that produces the data described by this contract."
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Owning team identifier for the producing pipeline."
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the contract (e.g. 1.0.0)."
+    },
+    "output_schema": {
+      "$ref": "#/definitions/OutputSchema"
+    },
+    "volume": {
+      "$ref": "#/definitions/VolumeConstraint"
+    },
+    "freshness": {
+      "$ref": "#/definitions/FreshnessConstraint"
+    },
+    "dq_rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/DQRule"
+      },
+      "description": "DQ rules that apply to the contracted dataset."
+    },
+    "consumers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/Consumer"
+      },
+      "description": "Downstream teams consuming this contract."
+    }
+  },
+  "definitions": {
+    "OutputSchema": {
+      "type": "object",
+      "required": ["columns"],
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/ColumnDefinition"
+          }
+        }
+      }
+    },
+    "ColumnDefinition": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "integer", "float", "boolean", "timestamp", "date", "json"]
+        },
+        "nullable": {
+          "type": "boolean",
+          "default": false
+        },
+        "evolution_policy": {
+          "type": "string",
+          "enum": ["locked", "additive_only", "flexible"],
+          "description": "locked=no changes; additive_only=only non-breaking additions; flexible=any change with notice."
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "VolumeConstraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_rows": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "FreshnessConstraint": {
+      "type": "object",
+      "required": ["max_age_hours"],
+      "additionalProperties": false,
+      "properties": {
+        "max_age_hours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maximum acceptable data age in hours."
+        }
+      }
+    },
+    "DQRule": {
+      "type": "object",
+      "required": ["rule", "max_failure_rate_pct"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": {
+          "type": "string",
+          "description": "DQ rule identifier (e.g. null_rate, volume_check, freshness_check)."
+        },
+        "column": {
+          "type": "string",
+          "description": "Column the rule applies to (for null_rate checks)."
+        },
+        "max_failure_rate_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "Consumer": {
+      "type": "object",
+      "required": ["team", "criticality"],
+      "additionalProperties": false,
+      "properties": {
+        "team": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Consumer team identifier."
+        },
+        "criticality": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "How critical this data is to the consumer team's operations."
+        },
+        "notification_channel": {
+          "type": "string",
+          "description": "Slack channel or email list for notifications (e.g. #team-data-consumers)."
+        },
+        "use_cases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Human-readable list of use cases depending on this data."
+        }
+      }
+    }
+  }
+}

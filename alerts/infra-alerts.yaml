@@ -1,0 +1,52 @@
+groups:
+  - name: watch.infrastructure
+    interval: 60s
+    rules:
+
+      # ── T11.6: CPU alert ──────────────────────────────────────────────────
+      - alert: InfrastructureCPUHigh
+        expr: |
+          (1 - avg by(instance, node) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          domain: infrastructure
+          runbook_url: "https://wiki.internal/watch/runbooks/infra-cpu-high"
+        annotations:
+          summary: "High CPU on node {{ $labels.node }}"
+          description: >
+            Node {{ $labels.instance }} CPU utilisation has been above 85%
+            for more than 10 minutes. Current: {{ $value | humanize }}%.
+            Check for runaway pipeline tasks or resource contention.
+
+      # ── Pod OOM Killed ────────────────────────────────────────────────────
+      - alert: PodOOMKilled
+        expr: |
+          increase(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: infrastructure
+          runbook_url: "https://wiki.internal/watch/runbooks/pod-oom-killed"
+        annotations:
+          summary: "Pod OOM killed: {{ $labels.pod }} in {{ $labels.namespace }}"
+          description: >
+            Pod {{ $labels.pod }} (container {{ $labels.container }})
+            in namespace {{ $labels.namespace }} was OOM killed.
+            Check memory limits and pipeline resource requests.
+
+      # ── Spark Executor High GC ────────────────────────────────────────────
+      - alert: SparkExecutorHighGC
+        expr: |
+          rate(spark_executor_jvm_gc_time_ms[5m]) / rate(spark_executor_jvm_task_time_ms[5m]) > 0.20
+        for: 5m
+        labels:
+          severity: warning
+          domain: infrastructure
+          runbook_url: "https://wiki.internal/watch/runbooks/spark-high-gc"
+        annotations:
+          summary: "Spark executor GC >20% for job {{ $labels.spark_app_id }}"
+          description: >
+            Spark application {{ $labels.spark_app_id }} executor is spending
+            more than 20% of task time in GC. Current ratio: {{ $value | humanizePercentage }}.
+            Consider tuning JVM heap size or reducing partition count.

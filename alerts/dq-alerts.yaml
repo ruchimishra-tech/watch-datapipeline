@@ -1,0 +1,57 @@
+groups:
+  - name: watch.data_quality
+    interval: 30s
+    rules:
+
+      # ── T7.11: Any critical DQ violation fires an alert ────────────────────
+      - alert: DataQualityCriticalViolation
+        expr: |
+          increase(pipeline_dq_violations_total{severity="critical"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/dq-critical-violation"
+        annotations:
+          summary: "Critical DQ violation in pipeline {{ $labels.pipeline_id }}"
+          description: >
+            Pipeline {{ $labels.pipeline_id }} in {{ $labels.environment }}
+            recorded a critical data quality violation.
+            Rule: {{ $labels.dq_rule_id }}. Column: {{ $labels.dq_column }}.
+            Failure rate: {{ $labels.dq_failure_rate_pct }}%.
+            Action taken: {{ $labels.dq_action_taken }}.
+          dashboard_url: "http://grafana:3000/d/watch-l2-pipeline?var-environment={{ $labels.environment }}"
+
+      # ── Sustained warning-level DQ degradation ────────────────────────────
+      - alert: DataQualityWarningDegraded
+        expr: |
+          rate(pipeline_dq_violations_total{severity="warning"}[15m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/dq-warning-degraded"
+        annotations:
+          summary: "Sustained DQ warnings for pipeline {{ $labels.pipeline_id }}"
+          description: >
+            Pipeline {{ $labels.pipeline_id }} has been producing DQ warning violations
+            at a sustained rate for the last 10 minutes.
+            This may indicate upstream data quality degradation before it becomes critical.
+
+      # ── Schema drift detected ─────────────────────────────────────────────
+      - alert: SchemaChangeDetected
+        expr: |
+          increase(pipeline_dq_violations_total{dq_rule_id="schema_check"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/schema-change-detected"
+        annotations:
+          summary: "Schema change detected in pipeline {{ $labels.pipeline_id }}"
+          description: >
+            Pipeline {{ $labels.pipeline_id }} detected a schema change.
+            Check data contract compliance and notify downstream consumers.

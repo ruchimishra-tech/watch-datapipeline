@@ -1,0 +1,81 @@
+groups:
+  - name: watch.streaming.lag
+    interval: 30s
+    rules:
+
+      # ── T6.3/T6.4: Consumer lag high for > 5 minutes ───────────────────────
+      - alert: StreamingConsumerLagHigh
+        expr: |
+          kafka_consumer_lag_sum > on(consumer_group, topic)
+            kafka_consumer_lag_threshold
+        for: 5m
+        labels:
+          severity: warning
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/streaming-lag-high"
+        annotations:
+          summary: "Consumer lag high for {{ $labels.consumer_group }} on {{ $labels.topic }}"
+          description: >
+            Consumer group {{ $labels.consumer_group }} on topic {{ $labels.topic }}
+            has lag {{ $value }} which exceeds the configured threshold.
+            This has been sustained for more than 5 minutes. Check consumer health,
+            upstream producer rate, and partition assignment.
+
+      # ── T6.5: Consumer has not processed any messages in 10 minutes ────────
+      - alert: StreamingConsumerDown
+        expr: |
+          rate(kafka_consumer_throughput_msgs_per_sec[10m]) == 0
+          and on(consumer_group, topic)
+            kafka_consumer_lag_sum > 0
+        for: 10m
+        labels:
+          severity: critical
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/streaming-consumer-down"
+        annotations:
+          summary: "Streaming consumer {{ $labels.consumer_group }} appears to be down"
+          description: >
+            Consumer group {{ $labels.consumer_group }} on topic {{ $labels.topic }}
+            has not consumed any messages for 10 minutes while lag is non-zero.
+            Consumer process may have crashed or lost its Kafka connection.
+
+      # ── T6.6: Error rate exceeds 1% for > 5 minutes ───────────────────────
+      - alert: StreamingErrorRateHigh
+        expr: |
+          kafka_consumer_error_rate > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/streaming-error-rate-high"
+        annotations:
+          summary: "High error rate for {{ $labels.consumer_group }} on {{ $labels.topic }}"
+          description: >
+            Consumer group {{ $labels.consumer_group }} on topic {{ $labels.topic }}
+            has an error rate of {{ $value | humanizePercentage }}, exceeding the 1% threshold.
+            Check dead-letter queue, serialisation errors, and downstream sink health.
+
+  - name: watch.streaming.latency
+    interval: 60s
+    rules:
+
+      # ── End-to-end latency SLA breach ─────────────────────────────────────
+      - alert: StreamingE2ELatencySLABreached
+        expr: |
+          kafka_end_to_end_latency_ms{quantile="0.95"}
+          > on(pipeline_id)
+            streaming_e2e_latency_sla_ms
+        for: 3m
+        labels:
+          severity: warning
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/streaming-latency-sla"
+        annotations:
+          summary: "Streaming p95 latency SLA breached for {{ $labels.pipeline_id }}"
+          description: >
+            Pipeline {{ $labels.pipeline_id }} p95 end-to-end latency is
+            {{ $value | humanize }}ms, exceeding its declared SLA.

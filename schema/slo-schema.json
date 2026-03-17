@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://watch.internal/schema/slo-schema.json",
+  "title": "Watch SLO Definition",
+  "description": "Schema for pipeline SLO definition YAML files.",
+  "type": "object",
+  "required": ["pipeline_id", "owner", "slos", "error_budget"],
+  "additionalProperties": false,
+  "properties": {
+    "pipeline_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique identifier for the pipeline."
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Owning team identifier (e.g. team-customer-data)."
+    },
+    "slos": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Map of SLO name to SLO definition.",
+      "additionalProperties": {
+        "$ref": "#/definitions/SLODefinition"
+      }
+    },
+    "error_budget": {
+      "$ref": "#/definitions/ErrorBudget"
+    }
+  },
+  "definitions": {
+    "SLODefinition": {
+      "type": "object",
+      "required": ["sli", "target", "window"],
+      "additionalProperties": false,
+      "properties": {
+        "sli": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Prometheus recording rule name for the SLI (e.g. pipeline:freshness_sli:good)."
+        },
+        "target": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 99.99,
+          "description": "SLO target percentage (0–99.99). Cannot be 100 — an unachievable SLO."
+        },
+        "window": {
+          "type": "string",
+          "pattern": "^[0-9]+(d|h|w)$",
+          "description": "Rolling window duration (e.g. 28d, 720h, 4w)."
+        },
+        "sla_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum allowed duration in seconds for this SLO dimension (freshness, latency)."
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "ErrorBudget": {
+      "type": "object",
+      "required": ["freeze_threshold_pct"],
+      "additionalProperties": false,
+      "properties": {
+        "freeze_threshold_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Block deployments when error budget remaining drops below this percentage."
+        },
+        "alert_fast_burn_factor": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Multiplier above normal burn rate that triggers a critical fast-burn alert."
+        },
+        "alert_slow_burn_factor": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Multiplier above normal burn rate that triggers a warning slow-burn alert."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+pipeline_id: customer-360-enrichment
+owner: team-customer-data
+slos:
+  freshness:
+    sli: pipeline:freshness_sli:good
+    target: 99.5
+    window: 28d
+    sla_seconds: 7200
+    description: "Data must arrive within 2 hours of scheduled trigger."
+  success_rate:
+    sli: pipeline:success_rate_sli:good
+    target: 99.0
+    window: 28d
+    description: "At least 99% of pipeline runs must succeed."
+error_budget:
+  freeze_threshold_pct: 10
+  alert_fast_burn_factor: 14.4
+  alert_slow_burn_factor: 3.0

@@ -1,0 +1,82 @@
+{
+  "uid": "watch-l3-infra",
+  "title": "Watch L3 — Infrastructure",
+  "tags": ["watch", "infrastructure", "l3"],
+  "schemaVersion": 38,
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "type": "query",
+        "datasource": {"uid": "prometheus-watch"},
+        "label": "Environment"
+      },
+      {
+        "name": "node",
+        "type": "query",
+        "datasource": {"uid": "prometheus-watch"},
+        "label": "Node"
+      },
+      {
+        "name": "spark_app_id",
+        "type": "query",
+        "datasource": {"uid": "prometheus-watch"},
+        "label": "Spark App"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "heatmap",
+      "title": "cpu-memory-heatmap",
+      "datasource": {"uid": "prometheus-watch"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "(1 - avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * 100",
+          "legendFormat": "CPU % {{instance}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "pod-health-table",
+      "datasource": {"uid": "prometheus-watch"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "kube_pod_status_phase{phase!=\"Running\"}",
+          "legendFormat": "{{namespace}}/{{pod}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "spark-executor-utilisation",
+      "datasource": {"uid": "prometheus-watch"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {
+          "expr": "spark_executor_jvm_heap_used_bytes{spark_app_id=~\"$spark_app_id\"}",
+          "legendFormat": "Heap {{executor_id}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "pipeline-run-timeline",
+      "datasource": {"uid": "prometheus-watch"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {
+          "expr": "pipeline_run_duration_seconds{environment=~\"$environment\"}",
+          "legendFormat": "{{pipeline_id}}"
+        }
+      ]
+    }
+  ]
+}

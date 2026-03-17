@@ -1,0 +1,50 @@
+contract_id: contract-customer-360-v1
+pipeline_id: customer-360-enrichment
+owner: team-customer-data
+version: 1.0.0
+output_schema:
+  columns:
+    - name: customer_id
+      type: string
+      nullable: false
+      evolution_policy: locked
+      description: "Primary customer identifier — never remove or change type."
+    - name: risk_tier
+      type: string
+      nullable: false
+      evolution_policy: locked
+      description: "Risk classification (low/medium/high)."
+    - name: enrichment_timestamp
+      type: timestamp
+      nullable: false
+      evolution_policy: additive_only
+    - name: account_id
+      type: string
+      nullable: true
+      evolution_policy: flexible
+volume:
+  min_rows: 10000
+  max_rows: 5000000
+freshness:
+  max_age_hours: 3
+dq_rules:
+  - rule: null_rate
+    column: customer_id
+    max_failure_rate_pct: 0.0
+  - rule: null_rate
+    column: risk_tier
+    max_failure_rate_pct: 1.0
+  - rule: volume_check
+    max_failure_rate_pct: 5.0
+consumers:
+  - team: team-risk-analytics
+    criticality: critical
+    notification_channel: "#risk-data-alerts"
+    use_cases:
+      - "Real-time risk scoring"
+      - "Regulatory reporting"
+  - team: team-product-recommendations
+    criticality: high
+    notification_channel: "#product-data-alerts"
+    use_cases:
+      - "Personalization engine"
