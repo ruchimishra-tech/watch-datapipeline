@@ -1,0 +1,62 @@
+version: "3.8"
+
+# Simulator overlay — extends the main observability stack.
+#
+# Usage:
+#   docker compose -f infra/docker-compose.yml -f infra/docker-compose.simulator.yml up -d
+#
+# Or use the convenience script:
+#   ./simulator/start.sh
+
+services:
+
+  pipeline-simulator:
+    build:
+      context: ..
+      dockerfile: simulator/Dockerfile
+    command: ["python", "-m", "simulator.simulator"]
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://collector:4317"
+      WATCH_DEPLOYMENT_ENVIRONMENT: "docker-dev"
+      SIMULATOR_METRICS_PORT: "8099"
+      # Uncomment to run only one scenario for debugging:
+      # SIMULATOR_SCENARIO: "risk-scoring"
+    ports:
+      - "8099:8099"     # Prometheus scrape + /health
+    networks:
+      - observability
+    depends_on:
+      - collector
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8099/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  streaming-simulator:
+    build:
+      context: ..
+      dockerfile: simulator/Dockerfile
+    command: ["python", "-m", "simulator.streaming_simulator"]
+    environment:
+      WATCH_DEPLOYMENT_ENVIRONMENT: "docker-dev"
+      STREAMING_METRICS_PORT: "8098"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://collector:4317"
+    ports:
+      - "8098:8098"
+    networks:
+      - observability
+    depends_on:
+      - collector
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8098/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  observability:
+    external: true
+    name: infra_observability

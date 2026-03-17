@@ -18,3 +18,11 @@ scrape_configs:
   - job_name: "prometheus"
     static_configs:
       - targets: ["localhost:9090"]
+
+  - job_name: "pipeline-simulator"
+    static_configs:
+      - targets: ["pipeline-simulator:8099"]
+
+  - job_name: "streaming-simulator"
+    static_configs:
+      - targets: ["streaming-simulator:8098"]
