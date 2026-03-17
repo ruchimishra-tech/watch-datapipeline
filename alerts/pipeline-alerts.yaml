@@ -1,0 +1,83 @@
+groups:
+  - name: watch.pipeline.failures
+    interval: 30s
+    rules:
+
+      # ── T4.1: Pipeline run ended with failed status ────────────────────────
+      - alert: PipelineRunFailed
+        expr: |
+          increase(pipeline_runs_total{status="failed"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/pipeline-run-failed"
+        annotations:
+          summary: "Pipeline {{ $labels.pipeline_id }} has failed runs"
+          description: >
+            Pipeline {{ $labels.pipeline_id }} in environment {{ $labels.environment }}
+            recorded {{ $value }} failure(s) in the last 5 minutes.
+            Open the L2 dashboard for details.
+          dashboard_url: "http://grafana:3000/d/watch-l2-pipeline?var-environment={{ $labels.environment }}&var-pipeline_run_id={{ $labels.pipeline_run_id }}"
+
+      # ── T4.2: Pipeline has not started within its expected window ──────────
+      - alert: PipelineRunDelayed
+        expr: |
+          (
+            time() - pipeline_last_run_start_time_seconds
+          ) > on(pipeline_id) pipeline_expected_start_delay_seconds
+          unless on(pipeline_id)
+            increase(pipeline_runs_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/pipeline-run-delayed"
+        annotations:
+          summary: "Pipeline {{ $labels.pipeline_id }} is delayed"
+          description: >
+            Pipeline {{ $labels.pipeline_id }} has not started within its expected window.
+            Last known start was {{ $value | humanizeDuration }} ago.
+            Check scheduler and upstream dependencies.
+
+      # ── SLA breach: run duration exceeded declared limit ──────────────────
+      - alert: PipelineSLABreached
+        expr: |
+          pipeline_run_duration_ms
+          > on(pipeline_id)
+            pipeline_sla_duration_ms
+        for: 0m
+        labels:
+          severity: warning
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/pipeline-sla-breached"
+        annotations:
+          summary: "Pipeline {{ $labels.pipeline_id }} breached its SLA"
+          description: >
+            Pipeline {{ $labels.pipeline_id }} in {{ $labels.environment }} ran for
+            {{ $value | humanize }}ms, exceeding its declared SLA.
+          dashboard_url: "http://grafana:3000/d/watch-l1-estate?var-environment={{ $labels.environment }}"
+
+  - name: watch.pipeline.data_quality
+    interval: 60s
+    rules:
+
+      # ── DQ critical rule violation rate too high ──────────────────────────
+      - alert: PipelineDQCriticalViolationHigh
+        expr: |
+          rate(pipeline_dq_violations_total{severity="critical"}[10m]) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          domain: "{{ $labels.domain }}"
+          pipeline_id: "{{ $labels.pipeline_id }}"
+          runbook_url: "https://wiki.internal/watch/runbooks/dq-critical-violation"
+        annotations:
+          summary: "High DQ critical violation rate for {{ $labels.pipeline_id }}"
+          description: >
+            Pipeline {{ $labels.pipeline_id }} is producing critical data quality
+            violations at {{ $value | humanize }} per second. Downstream consumers
+            may be receiving corrupt data.

@@ -1,0 +1,42 @@
+{
+  "pipeline.run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "pipeline.name": "Customer 360 Enrichment",
+  "pipeline.id": "customer-360-enrichment",
+  "pipeline.type": "batch",
+  "deployment.environment": "dev",
+  "pipeline.status": "running",
+  "etl.phase": "transform",
+  "transform.operations": ["filter_invalid_records", "deduplicate_on_account_id", "join_customer_master", "derive_risk_score"],
+  "transform.joins": [
+    {
+      "type": "left",
+      "left_dataset": "customer_transactions",
+      "right_dataset": "customer_master",
+      "join_keys": ["customer_id"],
+      "match_rate_pct": 98.7,
+      "unmatched_rows": 680
+    }
+  ],
+  "transform.aggregations": [
+    {
+      "function": "sum",
+      "column": "transaction_amount",
+      "group_by": ["account_id", "transaction_date"]
+    }
+  ],
+  "transform.rows_in": 52340,
+  "transform.rows_out": 51200,
+  "transform.rows_dropped": 1140,
+  "transform.rows_dropped_reason": "null_account_id",
+  "transform.rows_quarantined": 0,
+  "transform.rows_derived": 0,
+  "transform.schema_drift_detected": false,
+  "transform.output_schema.columns": ["account_id", "customer_id", "transaction_date", "total_amount", "risk_score"],
+  "transform.output_schema.column_count": 5,
+  "transform.engine": "spark",
+  "transform.engine.version": "3.5.0",
+  "transform.spark.stages_total": 4,
+  "transform.spark.stages_failed": 0,
+  "transform.spark.shuffle_bytes": 52428800,
+  "transform.duration_ms": 45200
+}

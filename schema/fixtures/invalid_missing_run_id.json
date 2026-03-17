@@ -1,0 +1,7 @@
+{
+  "pipeline.name": "Customer 360 Enrichment",
+  "pipeline.id": "customer-360-enrichment",
+  "pipeline.type": "batch",
+  "deployment.environment": "dev",
+  "pipeline.status": "success"
+}

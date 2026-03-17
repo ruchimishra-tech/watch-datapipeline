@@ -1,0 +1,31 @@
+name: Schema Lint & Contract Tests
+
+on:
+  pull_request:
+    paths:
+      - "schema/**"
+      - "tests/contract/**"
+  push:
+    branches: [main]
+
+jobs:
+  schema-lint:
+    name: Validate span schema and fixtures
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install jsonschema pytest
+
+      - name: Validate schema file is valid JSON
+        run: python -c "import json; json.load(open('schema/span-schema.json'))"
+
+      - name: Run contract tests (T0.2 – T0.22)
+        run: pytest tests/contract/test_span_schema.py -v --tb=short -m phase0

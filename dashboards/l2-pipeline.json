@@ -1,0 +1,271 @@
+{
+  "__watch_meta": {
+    "tier": "L2",
+    "mandatory_panels": ["run-status-header", "phase-gantt", "phase-detail-table", "failure-details"],
+    "required_variables": ["environment", "pipeline_run_id"]
+  },
+  "uid": "watch-l2-pipeline",
+  "title": "Watch — Pipeline Run Detail",
+  "description": "L2 dashboard: drill-down into a single pipeline run. Shows phase timeline, row counts, data quality events, and failure details.",
+  "tags": ["watch", "l2", "pipeline"],
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "type": "custom",
+        "options": [
+          { "text": "dev",        "value": "dev",        "selected": true },
+          { "text": "staging",    "value": "staging",    "selected": false },
+          { "text": "production", "value": "production", "selected": false }
+        ],
+        "current": { "text": "dev", "value": "dev" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "pipeline_run_id",
+        "label": "Pipeline Run ID",
+        "type": "textbox",
+        "current": { "text": "", "value": "" },
+        "hide": 0,
+        "description": "The pipeline.run_id to investigate. Paste from an alert or from the L1 pipeline run table."
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "uid": "run-status-header",
+      "title": "Run Status",
+      "description": "Overall status of the selected pipeline run.",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 3 },
+      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "success":  { "color": "green", "text": "SUCCESS"  } } },
+            { "type": "value", "options": { "failed":   { "color": "red",   "text": "FAILED"   } } },
+            { "type": "value", "options": { "running":  { "color": "blue",  "text": "RUNNING"  } } },
+            { "type": "value", "options": { "cancelled":{ "color": "grey",  "text": "CANCELLED"} } }
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "queryType": "traceql",
+          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && name=\"pipeline.run\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "uid": "run-duration",
+      "title": "Total Duration",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 3 },
+      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "queryType": "traceql",
+          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && name=\"pipeline.run\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "uid": "run-rows-written",
+      "title": "Rows Written",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 3 },
+      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "queryType": "traceql",
+          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && name=\"etl.load\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "uid": "run-retry-count",
+      "title": "Retry Attempt",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 3 },
+      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow","value": 1 },
+              { "color": "red",   "value": 3 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "queryType": "traceql",
+          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && name=\"pipeline.run\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "uid": "phase-gantt",
+      "title": "Phase Timeline (Extract → Transform → Load)",
+      "description": "Gantt-style view showing the start time and duration of each ETL phase. Hover a bar to see row counts and engine details.",
+      "type": "state-timeline",
+      "gridPos": { "x": 0, "y": 3, "w": 24, "h": 6 },
+      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "options": {
+        "rowHeight": 0.6,
+        "showValue": "always",
+        "mergeValues": false,
+        "fillOpacity": 70
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 1 },
+          "mappings": [
+            { "type": "value", "options": { "success": { "color": "green" } } },
+            { "type": "value", "options": { "failed":  { "color": "red"   } } },
+            { "type": "value", "options": { "running": { "color": "blue"  } } }
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "queryType": "traceql",
+          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && span.etl\\.phase=~\"extract|transform|load\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "uid": "phase-detail-table",
+      "title": "Phase Detail",
+      "description": "Detailed metrics per ETL phase: duration, rows read/written/dropped, engine, and status.",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 8 },
+      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "options": {
+        "footer": { "show": false },
+        "sortBy": [{ "displayName": "etl.phase", "desc": false }]
+      },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "pipeline.status" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              {
+                "id": "mappings",
+                "value": [
+                  { "type": "value", "options": { "success": { "color": "green", "text": "success" } } },
+                  { "type": "value", "options": { "failed":  { "color": "red",   "text": "failed"  } } }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "queryType": "traceql",
+          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && span.etl\\.phase=~\"extract|transform|load\"}",
+          "tableType": "spans",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "uid": "failure-details",
+      "title": "Failure Details",
+      "description": "Populated only when pipeline.status = failed. Shows the failed phase, failure reason, and data quality violations.",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 17, "w": 24, "h": 6 },
+      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "options": { "footer": { "show": false } },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "queryType": "traceql",
+          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && span.pipeline\\.status=\"failed\"}",
+          "tableType": "spans",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "uid": "dq-events",
+      "title": "Data Quality Events",
+      "description": "Data quality check results for this run. Shows rule, column, severity, failure rate, and action taken.",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 6 },
+      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "options": { "footer": { "show": false } },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "dq.severity" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              {
+                "id": "mappings",
+                "value": [
+                  { "type": "value", "options": { "critical": { "color": "red",    "text": "critical" } } },
+                  { "type": "value", "options": { "warning":  { "color": "yellow", "text": "warning"  } } },
+                  { "type": "value", "options": { "pass":     { "color": "green",  "text": "pass"     } } }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "queryType": "traceql",
+          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && span.dq\\.rule_id != nil}",
+          "tableType": "spans",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

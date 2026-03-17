@@ -1,0 +1,23 @@
+{
+  "pipeline.run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "pipeline.name": "Customer 360 Enrichment",
+  "pipeline.id": "customer-360-enrichment",
+  "pipeline.type": "batch",
+  "deployment.environment": "dev",
+  "pipeline.status": "running",
+  "etl.phase": "extract",
+  "extract.source.system": "oracle",
+  "extract.source.database": "CRM_DB",
+  "extract.source.schema": "SALES",
+  "extract.source.table": "CUSTOMER_TRANSACTIONS",
+  "extract.source.format": "na",
+  "extract.query.type": "incremental",
+  "extract.query.sql": "SELECT * FROM CUSTOMER_TRANSACTIONS WHERE updated_at > ? AND updated_at <= ?",
+  "extract.query.incremental_key": "updated_at",
+  "extract.query.incremental_from": "2026-03-15T00:00:00Z",
+  "extract.query.incremental_to": "2026-03-16T00:00:00Z",
+  "extract.rows_read": 52340,
+  "extract.bytes_read": 104857600,
+  "extract.duration_ms": 12500,
+  "extract.connection.host": "oracle-crm.internal"
+}

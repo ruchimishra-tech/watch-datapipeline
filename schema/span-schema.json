@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://watch-observability/schema/span-schema.json",
+  "title": "Watch Observability Span Schema",
+  "description": "Canonical schema for all spans emitted by the Watch data pipeline observability platform. Discriminated by the presence and value of etl.phase: absent = root span, 'extract'/'transform'/'load' = phase spans.",
+  "type": "object",
+
+  "definitions": {
+
+    "required_root_attributes": {
+      "type": "object",
+      "required": [
+        "pipeline.run_id",
+        "pipeline.name",
+        "pipeline.id",
+        "pipeline.type",
+        "deployment.environment",
+        "pipeline.status"
+      ],
+      "properties": {
+        "pipeline.run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pipeline.name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pipeline.id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+        },
+        "pipeline.type": {
+          "type": "string",
+          "enum": ["batch", "streaming"]
+        },
+        "deployment.environment": {
+          "type": "string",
+          "enum": ["dev", "staging", "production"]
+        },
+        "pipeline.status": {
+          "type": "string",
+          "enum": ["running", "success", "failed", "cancelled", "unknown"]
+        },
+        "pipeline.failure_phase":  { "type": "string" },
+        "pipeline.failure_reason": { "type": "string" },
+        "retry.attempt":           { "type": "integer", "minimum": 0 }
+      },
+      "if": {
+        "properties": { "pipeline.status": { "const": "failed" } },
+        "required": ["pipeline.status"]
+      },
+      "then": {
+        "required": ["pipeline.failure_reason"]
+      }
+    },
+
+    "extract_attributes": {
+      "type": "object",
+      "required": ["extract.source.system", "extract.query.type", "extract.rows_read"],
+      "properties": {
+        "extract.source.system": {
+          "type": "string",
+          "enum": ["oracle", "postgres", "mysql", "sqlserver", "snowflake", "bigquery", "redshift", "s3", "hdfs", "kafka", "api", "mongodb", "other"]
+        },
+        "extract.source.database": { "type": "string" },
+        "extract.source.schema":   { "type": "string" },
+        "extract.source.table":    { "type": "string" },
+        "extract.source.format": {
+          "type": "string",
+          "enum": ["parquet", "csv", "json", "orc", "avro", "delta", "iceberg", "na"]
+        },
+        "extract.source.partition": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_]+=.+$"
+        },
+        "extract.filter.predicate":   { "type": "string" },
+        "extract.filter.date_column": { "type": "string" },
+        "extract.filter.date_from":   { "type": "string" },
+        "extract.filter.date_to":     { "type": "string" },
+        "extract.query.type": {
+          "type": "string",
+          "enum": ["full_table", "incremental", "snapshot", "cdc", "api_call", "file_glob"]
+        },
+        "extract.query.sql": {
+          "type": "string",
+          "not": {
+            "pattern": "=\\s*'[^?]"
+          },
+          "description": "Literal string values not permitted. Use bind variable markers (?) only."
+        },
+        "extract.query.sql_hash":         { "type": "string", "minLength": 64, "maxLength": 64 },
+        "extract.query.incremental_key":  { "type": "string" },
+        "extract.query.incremental_from": { "type": "string" },
+        "extract.query.incremental_to":   { "type": "string" },
+        "extract.rows_read":   { "type": "integer", "minimum": 0 },
+        "extract.bytes_read":  { "type": "integer", "minimum": 0 },
+        "extract.files_read":  { "type": "integer", "minimum": 0 },
+        "extract.duration_ms": { "type": "integer", "minimum": 0 },
+        "extract.source_row_count_at_query_time": { "type": "integer", "minimum": 0 },
+        "extract.connection.host":        { "type": "string" },
+        "extract.connection.jdbc_driver": { "type": "string" },
+        "extract.staging.path":           { "type": "string" }
+      },
+      "if": {
+        "properties": { "extract.query.type": { "const": "incremental" } },
+        "required": ["extract.query.type"]
+      },
+      "then": {
+        "required": ["extract.query.incremental_key"]
+      }
+    },
+
+    "transform_attributes": {
+      "type": "object",
+      "required": ["transform.rows_in", "transform.rows_out", "transform.engine"],
+      "properties": {
+        "transform.operations": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "transform.logic.description": { "type": "string" },
+        "transform.logic.version":     { "type": "string" },
+        "transform.joins": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "left_dataset", "right_dataset", "join_keys"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["inner", "left", "right", "cross", "broadcast"]
+              },
+              "left_dataset":   { "type": "string" },
+              "right_dataset":  { "type": "string" },
+              "join_keys":      { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+              "match_rate_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+              "unmatched_rows": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "transform.aggregations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["function", "column"],
+            "properties": {
+              "function": { "type": "string", "enum": ["sum", "count", "avg", "min", "max", "count_distinct"] },
+              "column":   { "type": "string" },
+              "group_by": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "transform.rows_in":            { "type": "integer", "minimum": 0 },
+        "transform.rows_out":           { "type": "integer", "minimum": 0 },
+        "transform.rows_dropped":       { "type": "integer", "minimum": 0 },
+        "transform.rows_dropped_reason":{ "type": "string" },
+        "transform.rows_quarantined":   { "type": "integer", "minimum": 0 },
+        "transform.rows_derived":       { "type": "integer", "minimum": 0 },
+        "transform.schema_drift_detected": { "type": "boolean" },
+        "transform.schema_drift_detail":   { "type": "string" },
+        "transform.output_schema.columns": { "type": "array", "items": { "type": "string" } },
+        "transform.output_schema.column_count": { "type": "integer", "minimum": 0 },
+        "transform.engine": {
+          "type": "string",
+          "enum": ["spark", "flink", "pandas", "dbt", "sql", "python"]
+        },
+        "transform.engine.version":      { "type": "string" },
+        "transform.spark.job_id":        { "type": "string" },
+        "transform.spark.stages_total":  { "type": "integer", "minimum": 0 },
+        "transform.spark.stages_failed": { "type": "integer", "minimum": 0 },
+        "transform.spark.shuffle_bytes": { "type": "integer", "minimum": 0 },
+        "transform.duration_ms":         { "type": "integer", "minimum": 0 }
+      },
+      "if": {
+        "properties": { "transform.schema_drift_detected": { "const": true } },
+        "required": ["transform.schema_drift_detected"]
+      },
+      "then": {
+        "required": ["transform.schema_drift_detail"]
+      }
+    },
+
+    "load_attributes": {
+      "type": "object",
+      "required": ["load.target.system", "load.write_mode", "load.rows_written"],
+      "properties": {
+        "load.target.system": {
+          "type": "string",
+          "enum": ["snowflake", "bigquery", "redshift", "s3", "hdfs", "delta", "iceberg", "postgres", "mysql", "other"]
+        },
+        "load.target.database":   { "type": "string" },
+        "load.target.schema":     { "type": "string" },
+        "load.target.table":      { "type": "string" },
+        "load.target.format": {
+          "type": "string",
+          "enum": ["parquet", "delta", "iceberg", "csv", "json", "orc", "na"]
+        },
+        "load.target.path":            { "type": "string" },
+        "load.target.partition_cols":  { "type": "array", "items": { "type": "string" } },
+        "load.target.partition_value": { "type": "string" },
+        "load.write_mode": {
+          "type": "string",
+          "enum": ["overwrite", "append", "merge", "upsert", "insert_overwrite_partition"]
+        },
+        "load.merge_keys":     { "type": "array", "items": { "type": "string" } },
+        "load.snapshot_id":    { "type": "string" },
+        "load.transaction_id": { "type": "string" },
+        "load.rows_written":   { "type": "integer", "minimum": 0 },
+        "load.rows_rejected":  { "type": "integer", "minimum": 0 },
+        "load.bytes_written":  { "type": "integer", "minimum": 0 },
+        "load.files_written":  { "type": "integer", "minimum": 0 },
+        "load.duration_ms":    { "type": "integer", "minimum": 0 },
+        "load.pre_check.target_row_count_before": { "type": "integer", "minimum": 0 },
+        "load.post_check.target_row_count_after":  { "type": "integer", "minimum": 0 },
+        "load.post_check.row_count_delta":         { "type": "integer" },
+        "load.post_check.passed":                  { "type": "boolean" },
+        "load.post_check.failure_reason":          { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "load.write_mode": { "enum": ["merge", "upsert"] } },
+            "required": ["load.write_mode"]
+          },
+          "then": {
+            "required": ["load.merge_keys"],
+            "properties": { "load.merge_keys": { "minItems": 1 } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "load.target.format": { "const": "iceberg" } },
+            "required": ["load.target.format"]
+          },
+          "then": { "required": ["load.snapshot_id"] }
+        },
+        {
+          "if": {
+            "properties": { "load.post_check.passed": { "const": false } },
+            "required": ["load.post_check.passed"]
+          },
+          "then": { "required": ["load.post_check.failure_reason"] }
+        }
+      ]
+    }
+  },
+
+  "allOf": [
+    { "$ref": "#/definitions/required_root_attributes" },
+    {
+      "if": {
+        "required": ["etl.phase"],
+        "properties": { "etl.phase": { "const": "extract" } }
+      },
+      "then": { "$ref": "#/definitions/extract_attributes" }
+    },
+    {
+      "if": {
+        "required": ["etl.phase"],
+        "properties": { "etl.phase": { "const": "transform" } }
+      },
+      "then": { "$ref": "#/definitions/transform_attributes" }
+    },
+    {
+      "if": {
+        "required": ["etl.phase"],
+        "properties": { "etl.phase": { "const": "load" } }
+      },
+      "then": { "$ref": "#/definitions/load_attributes" }
+    }
+  ]
+}

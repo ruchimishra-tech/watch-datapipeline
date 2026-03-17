@@ -1,0 +1,23 @@
+{
+  "pipeline.run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "pipeline.name": "Customer 360 Enrichment",
+  "pipeline.id": "customer-360-enrichment",
+  "pipeline.type": "batch",
+  "deployment.environment": "dev",
+  "pipeline.status": "success",
+  "etl.phase": "load",
+  "load.target.system": "snowflake",
+  "load.target.database": "ANALYTICS",
+  "load.target.schema": "CUSTOMER",
+  "load.target.table": "CUSTOMER_360",
+  "load.target.format": "na",
+  "load.write_mode": "append",
+  "load.rows_written": 51200,
+  "load.rows_rejected": 0,
+  "load.bytes_written": 10485760,
+  "load.duration_ms": 8300,
+  "load.pre_check.target_row_count_before": 1000000,
+  "load.post_check.target_row_count_after": 1051200,
+  "load.post_check.row_count_delta": 51200,
+  "load.post_check.passed": true
+}

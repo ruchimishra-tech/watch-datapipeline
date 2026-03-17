@@ -1,0 +1,14 @@
+# Core observability SDK dependencies
+opentelemetry-sdk==1.23.0
+opentelemetry-exporter-otlp-proto-grpc==1.23.0
+opentelemetry-exporter-otlp-proto-http==1.23.0
+
+# Schema validation
+jsonschema==4.21.1
+
+# HTTP client (used in canary verify + obs-cli)
+requests==2.31.0
+
+# Testing
+pytest==8.1.1
+pytest-timeout==2.3.1

@@ -1,0 +1,38 @@
+{{ define "slack.watch.title" -}}
+[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.alertname }}{{ with .GroupLabels.pipeline_id }} -- {{ . }}{{ end }}
+{{- end }}
+
+{{ define "slack.watch.text" -}}
+{{ range .Alerts -}}
+*Pipeline:* {{ if .Labels.pipeline_id }}{{ .Labels.pipeline_id }}{{ else }}unknown{{ end }}
+*Environment:* {{ if .Labels.environment }}{{ .Labels.environment }}{{ else }}unknown{{ end }}
+*Severity:* {{ .Labels.severity }}
+{{ if .Annotations.description }}*Detail:* {{ .Annotations.description }}{{ end }}
+{{ if .Annotations.dashboard_url }}*Dashboard:* <{{ .Annotations.dashboard_url }}|Open L2 Run Detail>{{ end }}
+{{ if .Labels.runbook_url }}*Runbook:* <{{ .Labels.runbook_url }}|View Runbook>{{ end }}
+{{ end -}}
+{{- end }}
+
+{{ define "email.watch.html" -}}
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Watch Pipeline Alert</h2>
+{{ range .Alerts }}
+<table>
+  <tr><td><strong>Pipeline</strong></td><td>{{ .Labels.pipeline_id }}</td></tr>
+  <tr><td><strong>Environment</strong></td><td>{{ .Labels.environment }}</td></tr>
+  <tr><td><strong>Severity</strong></td><td>{{ .Labels.severity }}</td></tr>
+  <tr><td><strong>Status</strong></td><td>{{ $.Status }}</td></tr>
+  <tr><td><strong>Detail</strong></td><td>{{ .Annotations.description }}</td></tr>
+  {{ if .Annotations.dashboard_url }}
+  <tr><td><strong>Dashboard</strong></td><td><a href="{{ .Annotations.dashboard_url }}">Open L2 Run Detail</a></td></tr>
+  {{ end }}
+  {{ if .Labels.runbook_url }}
+  <tr><td><strong>Runbook</strong></td><td><a href="{{ .Labels.runbook_url }}">View Runbook</a></td></tr>
+  {{ end }}
+</table>
+{{ end }}
+</body>
+</html>
+{{- end }}

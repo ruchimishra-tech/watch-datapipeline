@@ -1,0 +1,32 @@
+stream_over_http_enabled: true
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+ingester:
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 168h   # 7 days hot tier (local dev)
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/blocks
+    wal:
+      path: /var/tempo/wal
+
+# Multi-tenancy: environment namespaces are enforced at query time via tenant ID.
+# Staging and production spans are written to separate tenants.
+# In local dev, all spans use tenant "dev".
+multitenancy_enabled: false

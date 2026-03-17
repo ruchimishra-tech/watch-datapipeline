@@ -1,0 +1,62 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 512
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+
+  # PII Redaction — strips known PII-carrying attributes before storage.
+  # Full compliance gate (span quarantine) is added in Phase 9.
+  attributes/pii_redact:
+    actions:
+      - key: dq.sample_bad_values
+        action: update
+        value: "[REDACTED]"
+      - key: extract.filter.predicate
+        action: update
+        value: "[REDACTED]"
+      - key: step.sql
+        action: update
+        value: "[REDACTED]"
+      - key: extract.query.sql
+        action: update
+        value: "[REDACTED - use bind variable markers only]"
+
+exporters:
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  logging:
+    verbosity: basic
+
+  prometheus:
+    endpoint: "0.0.0.0:9464"
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/pii_redact, batch]
+      exporters: [otlp/tempo]
+
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]

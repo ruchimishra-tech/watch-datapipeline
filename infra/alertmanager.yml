@@ -1,0 +1,42 @@
+global:
+  resolve_timeout: 5m
+
+# Templates for Slack and email message bodies.
+templates:
+  - /etc/alertmanager/templates/*.tmpl
+
+# ── Routing ───────────────────────────────────────────────────────────────────
+# Local dev: all alerts go to the 'watch-ui' receiver (visible in Alertmanager UI).
+# In production, override this config via Helm values or env-substituted ConfigMap
+# to route critical -> slack-critical + email-critical, warning -> slack-warnings.
+route:
+  group_by: [alertname, pipeline_id, environment]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: watch-ui
+
+  routes:
+    - match:
+        severity: critical
+      receiver: watch-ui
+    - match:
+        severity: warning
+      receiver: watch-ui
+
+# ── Receivers ─────────────────────────────────────────────────────────────────
+receivers:
+  # watch-ui: no-op receiver — alerts are visible in the Alertmanager UI only.
+  # In production replace with slack_configs + email_configs blocks.
+  - name: watch-ui
+
+# ── Inhibition ────────────────────────────────────────────────────────────────
+inhibit_rules:
+  # Critical pipeline failure suppresses the delay warning for the same pipeline.
+  - source_match:
+      severity: critical
+      alertname: PipelineRunFailed
+    target_match:
+      severity: warning
+      alertname: PipelineRunDelayed
+    equal: [pipeline_id, environment]

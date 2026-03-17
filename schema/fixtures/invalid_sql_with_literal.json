@@ -1,0 +1,13 @@
+{
+  "pipeline.run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "pipeline.name": "Customer 360 Enrichment",
+  "pipeline.id": "customer-360-enrichment",
+  "pipeline.type": "batch",
+  "deployment.environment": "dev",
+  "pipeline.status": "running",
+  "etl.phase": "extract",
+  "extract.source.system": "oracle",
+  "extract.query.type": "full_table",
+  "extract.query.sql": "SELECT * FROM CUSTOMER WHERE customer_id = '12345'",
+  "extract.rows_read": 1
+}

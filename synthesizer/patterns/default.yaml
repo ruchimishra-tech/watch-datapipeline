@@ -1,0 +1,16 @@
+# Default log pattern config for the Watch log scraper synthesizer.
+# Each pattern is a named regex that matches log lines from un-instrumented pipelines.
+# Named groups map to span attributes.
+#
+# Supported named groups:
+#   name         -> pipeline.name
+#   reason       -> pipeline.failure_reason
+#   phase        -> etl.phase (matched against phase_map for canonicalization)
+#   duration_ms  -> pipeline.duration_ms (parsed as int)
+
+patterns:
+  run_start:   "Pipeline '(?P<name>.+)' started"
+  run_success: "Pipeline '(?P<name>.+)' completed successfully"
+  run_failed:  "Pipeline '(?P<name>.+)' failed: (?P<reason>.+)"
+  phase_start: "Stage '(?P<phase>.+)' starting"
+  phase_end:   "Stage '(?P<phase>.+)' completed in (?P<duration_ms>\\d+)ms"

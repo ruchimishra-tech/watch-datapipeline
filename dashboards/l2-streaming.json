@@ -1,0 +1,185 @@
+{
+  "__watch_meta": {
+    "tier": "L2",
+    "pipeline_type": "streaming",
+    "mandatory_panels": ["lag-over-time", "throughput-over-time", "error-rate-over-time", "e2e-latency-percentiles"],
+    "required_variables": ["environment", "consumer_group", "topic"]
+  },
+  "uid": "watch-l2-streaming",
+  "title": "Watch — Streaming Pipeline Health",
+  "description": "L2 dashboard for streaming (Kafka-based) pipelines. Shows consumer lag, throughput, error rate, and end-to-end latency. Use $consumer_group and $topic variables to scope to a specific consumer.",
+  "tags": ["watch", "l2", "streaming", "kafka"],
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "type": "custom",
+        "options": [
+          { "text": "dev",        "value": "dev",        "selected": true },
+          { "text": "staging",    "value": "staging",    "selected": false },
+          { "text": "production", "value": "production", "selected": false }
+        ],
+        "current": { "text": "dev", "value": "dev" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "consumer_group",
+        "label": "Consumer Group",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "definition": "label_values(kafka_consumer_lag_sum{deployment_environment=\"$environment\"}, consumer_group)",
+        "refresh": 2,
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "topic",
+        "label": "Topic",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "definition": "label_values(kafka_consumer_lag_sum{deployment_environment=\"$environment\", consumer_group=\"$consumer_group\"}, topic)",
+        "refresh": 2,
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "uid": "lag-over-time",
+      "title": "Consumer Lag Over Time",
+      "description": "Total consumer lag (sum across all partitions) for the selected consumer group and topic. A growing lag indicates the consumer is falling behind producers.",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "legend": { "calcs": ["last", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 10000 },
+              { "color": "red",    "value": 100000 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "kafka_consumer_lag_sum{deployment_environment=\"$environment\", consumer_group=~\"$consumer_group\", topic=~\"$topic\"}",
+          "legendFormat": "{{consumer_group}} / {{topic}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "uid": "throughput-over-time",
+      "title": "Consumer Throughput (msg/sec)",
+      "description": "Messages consumed per second for the selected consumer group and topic.",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "kafka_consumer_throughput_msgs_per_sec{deployment_environment=\"$environment\", consumer_group=~\"$consumer_group\", topic=~\"$topic\"}",
+          "legendFormat": "{{consumer_group}} / {{topic}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "uid": "error-rate-over-time",
+      "title": "Consumer Error Rate",
+      "description": "Fraction of messages that resulted in processing errors. Alert threshold: >1%.",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0, "max": 0.1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 0.005 },
+              { "color": "red",    "value": 0.01 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "kafka_consumer_error_rate{deployment_environment=\"$environment\", consumer_group=~\"$consumer_group\", topic=~\"$topic\"}",
+          "legendFormat": "{{consumer_group}} / {{topic}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "uid": "e2e-latency-percentiles",
+      "title": "End-to-End Latency (p50 / p95 / p99)",
+      "description": "Time from message produce to message processed. Requires producer timestamps embedded in message headers.",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "kafka_end_to_end_latency_ms{deployment_environment=\"$environment\", consumer_group=~\"$consumer_group\", topic=~\"$topic\", quantile=\"0.5\"}",
+          "legendFormat": "p50 {{consumer_group}}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "kafka_end_to_end_latency_ms{deployment_environment=\"$environment\", consumer_group=~\"$consumer_group\", topic=~\"$topic\", quantile=\"0.95\"}",
+          "legendFormat": "p95 {{consumer_group}}",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "kafka_end_to_end_latency_ms{deployment_environment=\"$environment\", consumer_group=~\"$consumer_group\", topic=~\"$topic\", quantile=\"0.99\"}",
+          "legendFormat": "p99 {{consumer_group}}",
+          "refId": "C"
+        }
+      ]
+    }
+  ]
+}

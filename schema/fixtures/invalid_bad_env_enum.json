@@ -1,0 +1,8 @@
+{
+  "pipeline.run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "pipeline.name": "Customer 360 Enrichment",
+  "pipeline.id": "customer-360-enrichment",
+  "pipeline.type": "batch",
+  "deployment.environment": "continuous",
+  "pipeline.status": "success"
+}
