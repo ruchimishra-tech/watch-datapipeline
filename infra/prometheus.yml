@@ -26,3 +26,9 @@ scrape_configs:
   - job_name: "streaming-simulator"
     static_configs:
       - targets: ["streaming-simulator:8098"]
+
+  # Banking Marketplace Simulator — data_product_* metrics for 13 products
+  - job_name: "banking-marketplace-simulator"
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["banking-simulator:8097"]

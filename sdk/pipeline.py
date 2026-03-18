@@ -14,6 +14,7 @@ import time
 import uuid
 from typing import Any, Optional
 
+from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.trace import Span, StatusCode
 
@@ -62,6 +63,7 @@ class Pipeline:
 
         self._tracer: Optional[trace.Tracer] = None
         self._root_span: Optional[Span] = None
+        self._ctx_token = None
         self._start_time: Optional[float] = None
         self._heartbeat_thread: Optional[threading.Thread] = None
         self._heartbeat_stop = threading.Event()
@@ -91,6 +93,9 @@ class Pipeline:
             self._root_span.set_attribute("pipeline.status", "running")
             if self.retry_attempt > 0:
                 self._root_span.set_attribute("retry.attempt", self.retry_attempt)
+            # Attach root span as the active context so phase spans become children
+            ctx = trace.set_span_in_context(self._root_span)
+            self._ctx_token = otel_context.attach(ctx)
             logger.debug("watch_obs: pipeline started run_id=%s", self.run_id)
         except Exception as exc:
             logger.warning("watch_obs: failed to start root span (%s)", exc)
@@ -109,6 +114,14 @@ class Pipeline:
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         duration_ms = int((time.time() - self._start_time) * 1000) if self._start_time else 0
+
+        # Detach root span context before ending it
+        if self._ctx_token is not None:
+            try:
+                otel_context.detach(self._ctx_token)
+            except Exception:
+                pass
+            self._ctx_token = None
 
         if self._root_span is not None:
             try:

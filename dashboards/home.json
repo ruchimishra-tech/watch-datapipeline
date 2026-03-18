@@ -1,0 +1,369 @@
+{
+  "uid": "watch-home",
+  "title": "Watch — Home",
+  "description": "Landing page for the Watch Pipeline Data Observatory. Start here to understand pipeline health, then drill down through L1 → L2 → L3.",
+  "tags": ["watch", "home"],
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "type": "custom",
+        "options": [
+          { "text": "docker-dev",  "value": "docker-dev",  "selected": true },
+          { "text": "dev",         "value": "dev",         "selected": false },
+          { "text": "staging",     "value": "staging",     "selected": false },
+          { "text": "production",  "value": "production",  "selected": false }
+        ],
+        "current": { "text": "docker-dev", "value": "docker-dev" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  },
+
+  "panels": [
+
+    {
+      "id": 1,
+      "type": "text",
+      "title": "",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 4 },
+      "transparent": true,
+      "options": {
+        "mode": "markdown",
+        "content": "# Watch &nbsp;·&nbsp; Pipeline Data Observatory\n\nReal-time observability for all data pipelines &mdash; **health** &nbsp;·&nbsp; **SLA compliance** &nbsp;·&nbsp; **data quality** &nbsp;·&nbsp; **infrastructure**.\n\nSelect an **Environment** above &nbsp;·&nbsp; Start at **[L1 &mdash; Estate Health →](/d/watch-l1-estate)** for the full picture &nbsp;·&nbsp; Drill into individual traces without copy-pasting IDs."
+      }
+    },
+
+    {
+      "id": 2,
+      "uid": "home-stat-pipelines",
+      "title": "Active Pipelines",
+      "description": "Number of registered pipelines in this environment.",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 4, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "blue", "value": null }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "count(group by (pipeline_id) (simulator_pipeline_info{environment=\"$environment\"}))",
+        "legendFormat": "Pipelines",
+        "refId": "A"
+      }]
+    },
+
+    {
+      "id": 3,
+      "uid": "home-stat-success",
+      "title": "Success Rate — 24 h",
+      "description": "Fraction of pipeline runs that completed successfully in the last 24 hours.",
+      "type": "stat",
+      "gridPos": { "x": 5, "y": 4, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",    "value": null },
+            { "color": "yellow", "value": 0.75 },
+            { "color": "green",  "value": 0.95 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "sum(rate(simulator_pipeline_runs_total{status=\"success\",environment=\"$environment\"}[24h])) / sum(rate(simulator_pipeline_runs_total{environment=\"$environment\"}[24h]))",
+        "legendFormat": "Success Rate",
+        "refId": "A"
+      }]
+    },
+
+    {
+      "id": 4,
+      "uid": "home-stat-failed",
+      "title": "Failed Runs — 1 h",
+      "description": "Pipeline runs that failed in the last hour.",
+      "type": "stat",
+      "gridPos": { "x": 10, "y": 4, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red",    "value": 3 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "sum(increase(simulator_pipeline_runs_total{status!=\"success\",environment=\"$environment\"}[1h]))",
+        "legendFormat": "Failed",
+        "refId": "A"
+      }]
+    },
+
+    {
+      "id": 5,
+      "uid": "home-stat-sla",
+      "title": "SLA Breaches — 24 h",
+      "description": "Runs that exceeded their declared SLA duration in the last 24 hours.",
+      "type": "stat",
+      "gridPos": { "x": 14, "y": 4, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red",    "value": 3 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "sum(increase(simulator_sla_breaches_total{environment=\"$environment\"}[24h]))",
+        "legendFormat": "SLA Breaches",
+        "refId": "A"
+      }]
+    },
+
+    {
+      "id": 6,
+      "uid": "home-stat-dq",
+      "title": "DQ Violations — 24 h",
+      "description": "Data quality violations detected across all pipelines in the last 24 hours.",
+      "type": "stat",
+      "gridPos": { "x": 19, "y": 4, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red",    "value": 5 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "sum(increase(simulator_dq_violations_total{environment=\"$environment\"}[24h]))",
+        "legendFormat": "DQ Violations",
+        "refId": "A"
+      }]
+    },
+
+    {
+      "id": 100,
+      "type": "row",
+      "title": "NAVIGATION — HOW TO USE THIS OBSERVATORY",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 7,
+      "type": "text",
+      "title": "",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 13 },
+      "transparent": true,
+      "options": {
+        "mode": "markdown",
+        "content": "## Dashboard Hierarchy\n\n| Tier | Dashboard | What it answers | When to use |\n|:----:|-----------|-----------------|-------------|\n| **L1** | [**Estate Health →**](/d/watch-l1-estate) | Are all pipelines healthy? SLA met? DQ clean? | **Start here every time** — your daily cockpit |\n| **L2** | [**Pipeline Run Detail →**](/d/watch-l2-pipeline) | Why did this run fail? What happened in each phase? Source/target data quality? | A batch pipeline is slow, failing, or has DQ issues |\n| **L2** | [**Streaming Health →**](/d/watch-l2-streaming) | Is consumer lag growing? Throughput dropping? E2E latency normal? | A Kafka consumer is falling behind or erroring |\n| **L3** | [**Infrastructure →**](/d/watch-l3-infra) | Is the collector healthy? Prometheus scraping? Simulators running? | Metrics not arriving — infrastructure suspected |\n\n---\n\n**Drill-down path** &mdash; fully linked, zero copy-paste:\n\n```\nL1  Estate Health\n     │\n     ├── click pipeline name or ID ──────────▶  L2  Pipeline Run Detail\n     │                                                │\n     │                                                └── click Trace ID ──▶  Trace Waterfall\n     │                                                                          Phase spans  (Extract · Transform · Load)\n     │                                                                          Data Quality events (rule · column · severity)\n     │\n     └── (Kafka pipelines) ──────────────────▶  L2  Streaming Health\n\n     Any level  ─── top nav bar ─────────────▶  L3  Infrastructure Health\n```"
+      }
+    },
+
+    {
+      "id": 101,
+      "type": "row",
+      "title": "QUICK ACCESS",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 22, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 8,
+      "type": "text",
+      "title": "L1 · Estate Health",
+      "gridPos": { "x": 0, "y": 23, "w": 6, "h": 8 },
+      "options": {
+        "mode": "markdown",
+        "content": "### [Open Dashboard →](/d/watch-l1-estate)\n\nYour **daily cockpit**. All pipelines side by side.\n\n- Pipeline registry with live status\n- Success rate · SLA · DQ columns\n- Performance trend charts\n- Recent runs (Tempo-backed)\n\n**Start here.** Click a pipeline name to drill into L2."
+      }
+    },
+
+    {
+      "id": 9,
+      "type": "text",
+      "title": "L2 · Pipeline Run Detail",
+      "gridPos": { "x": 6, "y": 23, "w": 6, "h": 8 },
+      "options": {
+        "mode": "markdown",
+        "content": "### [Open Dashboard →](/d/watch-l2-pipeline)\n\nNavigate here from L1 by **clicking a pipeline**.\n\n- Run history with clickable Trace IDs\n- Span waterfall (Extract → Transform → Load)\n- DQ events: rule · column · failure rate\n- Source & target system metadata per phase\n\nClick any Trace ID — waterfall loads inline."
+      }
+    },
+
+    {
+      "id": 10,
+      "type": "text",
+      "title": "L2 · Streaming Health",
+      "gridPos": { "x": 12, "y": 23, "w": 6, "h": 8 },
+      "options": {
+        "mode": "markdown",
+        "content": "### [Open Dashboard →](/d/watch-l2-streaming)\n\n**Kafka-based** pipeline monitoring.\n\n- Consumer lag over time\n- Messages/sec throughput\n- Error rate (alert threshold: 1%)\n- End-to-end latency p50 / p95 / p99\n\nScope by Consumer Group and Topic."
+      }
+    },
+
+    {
+      "id": 11,
+      "type": "text",
+      "title": "L3 · Infrastructure Health",
+      "gridPos": { "x": 18, "y": 23, "w": 6, "h": 8 },
+      "options": {
+        "mode": "markdown",
+        "content": "### [Open Dashboard →](/d/watch-l3-infra)\n\nAccessible **from any dashboard** via the nav bar.\n\n- OTel Collector: goroutines · heap · GC\n- Prometheus: memory · scrape health · TSDB\n- Simulators: run rates · Kafka lag · FDs\n- Service UP/DOWN status\n\nCheck here when metrics stop arriving."
+      }
+    },
+
+    {
+      "id": 102,
+      "type": "row",
+      "title": "LIVE ACTIVITY — Last 24 h",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 31, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 12,
+      "uid": "home-run-rate",
+      "title": "Pipeline Run Rate — Success vs. Failed",
+      "description": "Runs per minute across all pipelines. A failing pipeline appears as a red band.",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 32, "w": 15, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqpm",
+          "custom": { "lineWidth": 2, "fillOpacity": 15 }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byFrameRefID", "options": "B" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
+              { "id": "custom.fillOpacity", "value": 30 }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "sum by (pipeline_id) (rate(simulator_pipeline_runs_total{status=\"success\",environment=\"$environment\"}[5m])) * 60",
+          "legendFormat": "✓ {{pipeline_id}}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "sum by (pipeline_id) (rate(simulator_pipeline_runs_total{status!=\"success\",environment=\"$environment\"}[5m])) * 60",
+          "legendFormat": "✗ {{pipeline_id}}",
+          "refId": "B"
+        }
+      ]
+    },
+
+    {
+      "id": 13,
+      "uid": "home-success-by-pipeline",
+      "title": "24 h Success Rate by Pipeline",
+      "description": "Per-pipeline 24-hour success rate. Anything below the green threshold needs attention.",
+      "type": "bargauge",
+      "gridPos": { "x": 15, "y": 32, "w": 9, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "min": 0,
+          "max": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",    "value": null },
+            { "color": "yellow", "value": 0.75 },
+            { "color": "green",  "value": 0.95 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "sum by (pipeline_id) (rate(simulator_pipeline_runs_total{status=\"success\",environment=\"$environment\"}[24h])) / sum by (pipeline_id) (rate(simulator_pipeline_runs_total{environment=\"$environment\"}[24h]))",
+        "legendFormat": "{{pipeline_id}}",
+        "refId": "A"
+      }]
+    }
+
+  ]
+}

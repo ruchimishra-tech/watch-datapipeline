@@ -1,17 +1,17 @@
 {
   "__watch_meta": {
     "tier": "L2",
-    "mandatory_panels": ["run-status-header", "phase-gantt", "phase-detail-table", "failure-details"],
-    "required_variables": ["environment", "pipeline_run_id"]
+    "mandatory_panels": ["runs-table", "trace-view", "phase-detail-table"],
+    "required_variables": ["environment", "pipeline_id", "trace_id"]
   },
   "uid": "watch-l2-pipeline",
-  "title": "Watch — Pipeline Run Detail",
-  "description": "L2 dashboard: drill-down into a single pipeline run. Shows phase timeline, row counts, data quality events, and failure details.",
+  "title": "L2 — Pipeline Run Detail",
+  "description": "L2 dashboard: select a pipeline to see all its runs, then click any run to view the full trace waterfall with phase details and DQ events. Navigate here by clicking Pipeline Name in L1.",
   "tags": ["watch", "l2", "pipeline"],
   "schemaVersion": 38,
-  "version": 1,
-  "refresh": "10s",
-  "time": { "from": "now-1h", "to": "now" },
+  "version": 7,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
   "timepicker": {},
   "templating": {
     "list": [
@@ -20,252 +20,537 @@
         "label": "Environment",
         "type": "custom",
         "options": [
-          { "text": "dev",        "value": "dev",        "selected": true },
+          { "text": "docker-dev", "value": "docker-dev", "selected": true },
+          { "text": "dev",        "value": "dev",        "selected": false },
           { "text": "staging",    "value": "staging",    "selected": false },
           { "text": "production", "value": "production", "selected": false }
         ],
-        "current": { "text": "dev", "value": "dev" },
+        "current": { "text": "docker-dev", "value": "docker-dev" },
         "hide": 0,
         "includeAll": false,
         "multi": false
       },
       {
-        "name": "pipeline_run_id",
-        "label": "Pipeline Run ID",
+        "name": "pipeline_id",
+        "label": "Pipeline",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "definition": "label_values(simulator_pipeline_info{environment=\"$environment\"}, pipeline_id)",
+        "query": "label_values(simulator_pipeline_info{environment=\"$environment\"}, pipeline_id)",
+        "refresh": 1,
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": false,
+        "current": { "text": "All", "value": "$__all" },
+        "description": "Select a pipeline to see its runs. Pre-populated when navigating from L1."
+      },
+      {
+        "name": "trace_id",
+        "label": "Run (Trace ID)",
         "type": "textbox",
         "current": { "text": "", "value": "" },
         "hide": 0,
-        "description": "The pipeline.run_id to investigate. Paste from an alert or from the L1 pipeline run table."
+        "description": "Auto-populated when you click a run in the table below. You can also paste a trace ID directly."
       }
     ]
   },
   "panels": [
+
     {
-      "id": 1,
-      "uid": "run-status-header",
-      "title": "Run Status",
-      "description": "Overall status of the selected pipeline run.",
+      "id": 50,
+      "uid": "l2-nav",
+      "title": "",
+      "type": "text",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 2 },
+      "options": {
+        "mode": "markdown",
+        "content": "### [← Estate Health (L1)](/d/watch-l1-estate) &nbsp;&nbsp;›&nbsp;&nbsp; **Pipeline Runs (L2)** &nbsp;&nbsp;›&nbsp;&nbsp; Trace Detail &nbsp;&nbsp;|&nbsp;&nbsp; [Infrastructure (L3) →](/d/watch-l3-infra)\n\n**How to use:** Select a **Pipeline** from the dropdown → the runs table below filters to that pipeline. Click any **Trace ID** in the table → the trace waterfall and phase detail panels fill in below."
+      },
+      "transparent": true
+    },
+
+    {
+      "id": 200,
+      "type": "row",
+      "title": "PIPELINE HEALTH — $pipeline_id",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 2, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 20,
+      "uid": "l2-success-rate",
+      "title": "Success Rate (24h)",
+      "description": "24h success rate for the selected pipeline.",
       "type": "stat",
-      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 3 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "gridPos": { "x": 0, "y": 3, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
         "colorMode": "background",
+        "graphMode": "area",
         "textMode": "auto"
       },
       "fieldConfig": {
         "defaults": {
-          "mappings": [
-            { "type": "value", "options": { "success":  { "color": "green", "text": "SUCCESS"  } } },
-            { "type": "value", "options": { "failed":   { "color": "red",   "text": "FAILED"   } } },
-            { "type": "value", "options": { "running":  { "color": "blue",  "text": "RUNNING"  } } },
-            { "type": "value", "options": { "cancelled":{ "color": "grey",  "text": "CANCELLED"} } }
-          ]
+          "unit": "percentunit",
+          "decimals": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",    "value": null },
+            { "color": "yellow", "value": 0.75 },
+            { "color": "green",  "value": 0.95 }
+          ]}
         }
       },
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo-dev" },
-          "queryType": "traceql",
-          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && name=\"pipeline.run\"}",
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"success\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h])) / sum(rate(simulator_pipeline_runs_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h]))",
+          "legendFormat": "Success Rate",
           "refId": "A"
         }
       ]
     },
+
     {
-      "id": 2,
-      "uid": "run-duration",
-      "title": "Total Duration",
+      "id": 21,
+      "uid": "l2-total-runs",
+      "title": "Total Runs (24h)",
+      "description": "Total runs completed for the selected pipeline in the last 24 hours.",
       "type": "stat",
-      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 3 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
-      "fieldConfig": { "defaults": { "unit": "ms" } },
-      "targets": [
-        {
-          "datasource": { "type": "tempo", "uid": "tempo-dev" },
-          "queryType": "traceql",
-          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && name=\"pipeline.run\"}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "uid": "run-rows-written",
-      "title": "Rows Written",
-      "type": "stat",
-      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 3 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
-      "fieldConfig": { "defaults": { "unit": "short" } },
-      "targets": [
-        {
-          "datasource": { "type": "tempo", "uid": "tempo-dev" },
-          "queryType": "traceql",
-          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && name=\"etl.load\"}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "uid": "run-retry-count",
-      "title": "Retry Attempt",
-      "type": "stat",
-      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 3 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow","value": 1 },
-              { "color": "red",   "value": 3 }
-            ]
-          }
-        }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "tempo", "uid": "tempo-dev" },
-          "queryType": "traceql",
-          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && name=\"pipeline.run\"}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 5,
-      "uid": "phase-gantt",
-      "title": "Phase Timeline (Extract → Transform → Load)",
-      "description": "Gantt-style view showing the start time and duration of each ETL phase. Hover a bar to see row counts and engine details.",
-      "type": "state-timeline",
-      "gridPos": { "x": 0, "y": 3, "w": 24, "h": 6 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "gridPos": { "x": 5, "y": 3, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
       "options": {
-        "rowHeight": 0.6,
-        "showValue": "always",
-        "mergeValues": false,
-        "fillOpacity": 70
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
       },
       "fieldConfig": {
         "defaults": {
-          "custom": { "lineWidth": 1 },
-          "mappings": [
-            { "type": "value", "options": { "success": { "color": "green" } } },
-            { "type": "value", "options": { "failed":  { "color": "red"   } } },
-            { "type": "value", "options": { "running": { "color": "blue"  } } }
-          ]
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }]}
         }
       },
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo-dev" },
-          "queryType": "traceql",
-          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && span.etl\\.phase=~\"extract|transform|load\"}",
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "sum(increase(simulator_pipeline_runs_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h]))",
+          "legendFormat": "Runs",
           "refId": "A"
         }
       ]
     },
+
     {
-      "id": 6,
-      "uid": "phase-detail-table",
-      "title": "Phase Detail",
-      "description": "Detailed metrics per ETL phase: duration, rows read/written/dropped, engine, and status.",
+      "id": 22,
+      "uid": "l2-last-duration",
+      "title": "Last Run Duration",
+      "description": "Duration of the most recently completed run.",
+      "type": "stat",
+      "gridPos": { "x": 10, "y": 3, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 60 },
+            { "color": "red",    "value": 120 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "max(simulator_pipeline_last_duration_seconds{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"})",
+          "legendFormat": "Duration",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 23,
+      "uid": "l2-sla-breaches",
+      "title": "SLA Breaches (24h)",
+      "description": "Number of runs that exceeded the declared SLA.",
+      "type": "stat",
+      "gridPos": { "x": 15, "y": 3, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red",    "value": 5 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "sum(increase(simulator_sla_breaches_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h]))",
+          "legendFormat": "SLA Breaches",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 24,
+      "uid": "l2-dq-violations",
+      "title": "DQ Violations (24h)",
+      "description": "Data quality violations detected in the last 24 hours.",
+      "type": "stat",
+      "gridPos": { "x": 19, "y": 3, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red",    "value": 3 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "sum(increase(simulator_dq_violations_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h]))",
+          "legendFormat": "DQ Violations",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 201,
+      "type": "row",
+      "title": "ALL RUNS FOR '$pipeline_id' — Click any Trace ID to view its full trace below",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 7, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 1,
+      "uid": "runs-table",
+      "title": "Pipeline Runs — click a Trace ID to load the trace detail below",
+      "description": "All runs for the selected pipeline. Click a Trace ID → the span waterfall, phase table and DQ events panels below will populate with that run's data. No copy-paste needed.",
       "type": "table",
-      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 8 },
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 12 },
       "datasource": { "type": "tempo", "uid": "tempo-dev" },
       "options": {
         "footer": { "show": false },
-        "sortBy": [{ "displayName": "etl.phase", "desc": false }]
+        "sortBy": [{ "displayName": "Started", "desc": true }],
+        "cellHeight": "sm"
       },
       "fieldConfig": {
-        "defaults": { "custom": { "align": "left" } },
+        "defaults": { "custom": { "align": "auto", "filterable": true } },
         "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "traceIdHidden" },
+            "properties": [
+              { "id": "custom.hidden",  "value": false },
+              { "id": "displayName",    "value": "Trace ID" },
+              { "id": "custom.width",   "value": 250 },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Load this run →",
+                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-pipeline_id=${pipeline_id}&var-trace_id=${__value.raw}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "pipeline.name" },
+            "properties": [
+              { "id": "displayName", "value": "Pipeline" },
+              { "id": "custom.width", "value": 210 }
+            ]
+          },
           {
             "matcher": { "id": "byName", "options": "pipeline.status" },
             "properties": [
-              { "id": "custom.displayMode", "value": "color-background" },
-              {
-                "id": "mappings",
-                "value": [
-                  { "type": "value", "options": { "success": { "color": "green", "text": "success" } } },
-                  { "type": "value", "options": { "failed":  { "color": "red",   "text": "failed"  } } }
-                ]
-              }
+              { "id": "displayName", "value": "Status" },
+              { "id": "custom.width", "value": 100 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "mappings", "value": [
+                {
+                  "type": "value",
+                  "options": {
+                    "success": { "color": "green", "text": "✓ success", "index": 0 },
+                    "failed":  { "color": "red",   "text": "✗ failed",  "index": 1 },
+                    "running": { "color": "blue",  "text": "⟳ running", "index": 2 }
+                  }
+                }
+              ]}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "duration" },
+            "properties": [
+              { "id": "unit",         "value": "ns" },
+              { "id": "displayName",  "value": "Duration" },
+              { "id": "custom.width", "value": 110 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "time" },
+            "properties": [
+              { "id": "displayName",  "value": "Started" },
+              { "id": "custom.width", "value": 180 }
             ]
           }
         ]
       },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "spanID":         true,
+              "traceService":   true,
+              "traceName":      true,
+              "name":           true,
+              "pipeline.id":    true,
+              "pipeline.type":  true,
+              "pipeline.run_id": true,
+              "deployment.environment": true
+            },
+            "renameByName": {},
+            "indexByName": {
+              "traceIdHidden": 0,
+              "pipeline.name":   1,
+              "pipeline.status": 2,
+              "duration":        3,
+              "time":            4
+            }
+          }
+        }
+      ],
       "targets": [
         {
           "datasource": { "type": "tempo", "uid": "tempo-dev" },
           "queryType": "traceql",
-          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && span.etl\\.phase=~\"extract|transform|load\"}",
+          "query": "{span.pipeline.id=~\"$pipeline_id\" && span.deployment.environment=\"$environment\" && name=\"pipeline.run\"} | select(span.pipeline.name, span.pipeline.id, span.pipeline.status)",
+          "refId": "A",
           "tableType": "spans",
-          "refId": "A"
+          "limit": 100
         }
       ]
     },
+
     {
-      "id": 7,
-      "uid": "failure-details",
-      "title": "Failure Details",
-      "description": "Populated only when pipeline.status = failed. Shows the failed phase, failure reason, and data quality violations.",
-      "type": "table",
-      "gridPos": { "x": 0, "y": 17, "w": 24, "h": 6 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
-      "options": { "footer": { "show": false } },
-      "fieldConfig": {
-        "defaults": { "custom": { "align": "left" } }
+      "id": 202,
+      "type": "row",
+      "title": "TRACE DETAIL — $trace_id  (selected above)",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 51,
+      "uid": "trace-hint",
+      "title": "",
+      "type": "text",
+      "gridPos": { "x": 0, "y": 21, "w": 24, "h": 2 },
+      "options": {
+        "mode": "markdown",
+        "content": "> **Selected run:** `$trace_id`  \n> Click a **Trace ID** in the table above to populate the waterfall, phase detail and DQ events panels below."
       },
+      "transparent": true
+    },
+
+    {
+      "id": 2,
+      "uid": "trace-view",
+      "title": "Span Waterfall — Extract → Transform → Load",
+      "description": "Full trace waterfall for the selected run. Click any span bar to see its attributes: source/target systems, row counts, transform operations, DQ events and failure reason.",
+      "type": "traces",
+      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 16 },
+      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "options": { "createSpanLink": {} },
       "targets": [
         {
           "datasource": { "type": "tempo", "uid": "tempo-dev" },
-          "queryType": "traceql",
-          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && span.pipeline\\.status=\"failed\"}",
-          "tableType": "spans",
+          "queryType": "traceId",
+          "query": "$trace_id",
           "refId": "A"
         }
       ]
     },
+
     {
-      "id": 8,
-      "uid": "dq-events",
-      "title": "Data Quality Events",
-      "description": "Data quality check results for this run. Shows rule, column, severity, failure rate, and action taken.",
+      "id": 3,
+      "uid": "phase-detail-table",
+      "title": "Phase Spans Detail",
+      "description": "One row per ETL phase (extract, transform, load). Duration in ms. Status 1=OK, 2=ERROR. Click a row's span in the waterfall above for full attribute detail.",
       "type": "table",
-      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 6 },
+      "gridPos": { "x": 0, "y": 39, "w": 24, "h": 8 },
+      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "options": {
+        "footer": { "show": false },
+        "sortBy": [{ "displayName": "startTime", "desc": false }]
+      },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "statusCode" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "mappings", "value": [
+                { "type": "value", "options": { "1": { "color": "green", "text": "OK"    } } },
+                { "type": "value", "options": { "2": { "color": "red",   "text": "ERROR" } } }
+              ]}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "duration" },
+            "properties": [
+              { "id": "unit",        "value": "ms" },
+              { "id": "displayName", "value": "Duration" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "operationName" },
+            "properties": [{ "id": "displayName", "value": "Phase" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "startTime" },
+            "properties": [
+              { "id": "unit",        "value": "dateTimeAsIso" },
+              { "id": "displayName", "value": "Start Time" }
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [{ "fieldName": "operationName", "config": { "id": "regex", "options": { "value": "^etl\\." } } }],
+            "type": "include"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "traceID": true, "spanID": true, "parentSpanID": true,
+              "kind": true, "statusMessage": true,
+              "instrumentationLibraryName": true, "instrumentationLibraryVersion": true,
+              "traceState": true, "serviceTags": true, "logs": true,
+              "references": true, "serviceName": true, "tags": true
+            },
+            "renameByName": {
+              "operationName": "Phase",
+              "duration": "Duration (ms)",
+              "statusCode": "Status",
+              "startTime": "Start Time"
+            },
+            "indexByName": {
+              "operationName": 0,
+              "statusCode": 1,
+              "duration": 2,
+              "startTime": 3
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "queryType": "traceId",
+          "query": "$trace_id",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 4,
+      "uid": "dq-events-table",
+      "title": "Data Quality Events",
+      "description": "DQ check events emitted on the etl.extract span. Each check shows the rule, column, severity and null rate. warning = above 3% threshold.",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 47, "w": 24, "h": 7 },
       "datasource": { "type": "tempo", "uid": "tempo-dev" },
       "options": { "footer": { "show": false } },
       "fieldConfig": {
         "defaults": { "custom": { "align": "left" } },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "dq.severity" },
+            "matcher": { "id": "byName", "options": "statusCode" },
             "properties": [
               { "id": "custom.displayMode", "value": "color-background" },
-              {
-                "id": "mappings",
-                "value": [
-                  { "type": "value", "options": { "critical": { "color": "red",    "text": "critical" } } },
-                  { "type": "value", "options": { "warning":  { "color": "yellow", "text": "warning"  } } },
-                  { "type": "value", "options": { "pass":     { "color": "green",  "text": "pass"     } } }
-                ]
-              }
+              { "id": "mappings", "value": [
+                { "type": "value", "options": { "1": { "color": "green", "text": "OK"    } } },
+                { "type": "value", "options": { "2": { "color": "red",   "text": "ERROR" } } }
+              ]}
             ]
           }
         ]
       },
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [{ "fieldName": "operationName", "config": { "id": "equal", "options": { "value": "etl.extract" } } }],
+            "type": "include"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "traceID": true, "spanID": true, "parentSpanID": true,
+              "kind": true, "statusMessage": true,
+              "instrumentationLibraryName": true, "instrumentationLibraryVersion": true,
+              "traceState": true, "serviceTags": true, "references": true,
+              "serviceName": true, "tags": true, "startTime": true
+            },
+            "renameByName": {
+              "operationName": "Phase",
+              "statusCode": "Phase Status",
+              "duration": "Duration (ms)",
+              "logs": "DQ Events (raw)"
+            }
+          }
+        }
+      ],
       "targets": [
         {
           "datasource": { "type": "tempo", "uid": "tempo-dev" },
-          "queryType": "traceql",
-          "query": "{span.pipeline\\.run_id=\"$pipeline_run_id\" && span.dq\\.rule_id != nil}",
-          "tableType": "spans",
+          "queryType": "traceId",
+          "query": "$trace_id",
           "refId": "A"
         }
       ]
     }
+
   ]
 }

@@ -97,11 +97,29 @@ def _start_metrics_server() -> None:
 
 # ── Scenario thread ────────────────────────────────────────────────────────────
 
+def _emit_pipeline_info(scenarios: list) -> None:
+    """Emit static info metrics — one gauge per pipeline with all catalogue metadata."""
+    env = os.getenv("WATCH_DEPLOYMENT_ENVIRONMENT", "docker-dev")
+    for s in scenarios:
+        labels = {
+            "pipeline_id": s.pipeline_id,
+            "pipeline_name": s.pipeline_name,
+            "domain": s.domain,
+            "owner": s.owner,
+            "environment": env,
+            "description": (s.description[:80] if s.description else ""),
+        }
+        _set_gauge("simulator_pipeline_info", labels, 1.0)
+
+
 def _record_result(result: RunResult, scenario: ScenarioConfig) -> None:
+    env = os.getenv("WATCH_DEPLOYMENT_ENVIRONMENT", "docker-dev")
     labels = {
         "pipeline_id": result.pipeline_id,
+        "pipeline_name": scenario.pipeline_name,
         "domain": scenario.domain,
-        "environment": os.getenv("WATCH_DEPLOYMENT_ENVIRONMENT", "docker-dev"),
+        "owner": scenario.owner,
+        "environment": env,
     }
     _inc("simulator_pipeline_runs_total", {**labels, "status": result.status})
     _set_gauge("simulator_pipeline_last_duration_seconds", labels, result.duration_seconds)
@@ -145,6 +163,7 @@ def main() -> None:
     _start_metrics_server()
 
     active = [s for s in SCENARIOS if s.enabled]
+    _emit_pipeline_info(active)
     if ONLY_SCENARIO:
         active = [s for s in active if s.pipeline_id == ONLY_SCENARIO]
         if not active:

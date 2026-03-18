@@ -1,17 +1,32 @@
 {
   "__watch_meta": {
     "tier": "L1",
-    "mandatory_panels": ["pipeline-success-rate", "total-runs-today", "failed-runs-1h", "pipeline-run-table"],
-    "required_variables": ["environment"]
+    "mandatory_panels": [
+      "pipeline-success-rate",
+      "total-runs-today",
+      "failed-runs-1h",
+      "pipeline-catalog",
+      "pipeline-run-table"
+    ],
+    "required_variables": [
+      "environment"
+    ]
   },
   "uid": "watch-l1-estate",
-  "title": "Watch — Pipeline Estate Health",
-  "description": "L1 dashboard: overall pipeline estate health. Use this as the starting point for incident investigation.",
-  "tags": ["watch", "l1", "estate"],
+  "title": "L1 \u2014 Estate Health",
+  "description": "L1 dashboard: overall pipeline estate health. Starting point for incident investigation. Drill down: click any traceID \u2192 L2 Run Detail. See infra panel for L3 Infrastructure.",
+  "tags": [
+    "watch",
+    "l1",
+    "estate"
+  ],
   "schemaVersion": 38,
-  "version": 1,
+  "version": 5,
   "refresh": "30s",
-  "time": { "from": "now-24h", "to": "now" },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
   "timepicker": {},
   "templating": {
     "list": [
@@ -20,11 +35,31 @@
         "label": "Environment",
         "type": "custom",
         "options": [
-          { "text": "dev",        "value": "dev",        "selected": true },
-          { "text": "staging",    "value": "staging",    "selected": false },
-          { "text": "production", "value": "production", "selected": false }
+          {
+            "text": "docker-dev",
+            "value": "docker-dev",
+            "selected": true
+          },
+          {
+            "text": "dev",
+            "value": "dev",
+            "selected": false
+          },
+          {
+            "text": "staging",
+            "value": "staging",
+            "selected": false
+          },
+          {
+            "text": "production",
+            "value": "production",
+            "selected": false
+          }
         ],
-        "current": { "text": "dev", "value": "dev" },
+        "current": {
+          "text": "docker-dev",
+          "value": "docker-dev"
+        },
         "hide": 0,
         "includeAll": false,
         "multi": false
@@ -33,19 +68,96 @@
   },
   "panels": [
     {
+      "id": 100,
+      "type": "row",
+      "title": "ESTATE SUMMARY",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
       "id": 1,
-      "uid": "pipeline-success-rate",
-      "title": "Pipeline Success Rate (24h)",
-      "description": "Percentage of pipeline runs that completed successfully in the last 24 hours. Target: >99%.",
+      "uid": "active-pipelines",
+      "title": "Active Pipelines",
+      "description": "Total distinct pipelines currently emitting telemetry.",
       "type": "stat",
-      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "none",
         "textMode": "auto",
         "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "count(count by (pipeline_id) (simulator_pipeline_info{environment=\"$environment\"}))",
+          "legendFormat": "Pipelines",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "uid": "pipeline-success-rate",
+      "title": "Success Rate (24h)",
+      "description": "Percentage of all pipeline runs that completed successfully in the last 24 hours. Target: >99%.",
+      "type": "stat",
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 5,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
       },
       "fieldConfig": {
         "defaults": {
@@ -54,49 +166,30 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red",    "value": null },
-              { "color": "yellow", "value": 0.95 },
-              { "color": "green",  "value": 0.99 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.9
+              },
+              {
+                "color": "green",
+                "value": 0.99
+              }
             ]
           }
         }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "sum(rate(pipeline_runs_total{status=\"success\", environment=\"$environment\"}[24h])) / sum(rate(pipeline_runs_total{environment=\"$environment\"}[24h]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"success\", environment=\"$environment\"}[24h])) / sum(rate(simulator_pipeline_runs_total{environment=\"$environment\"}[24h]))",
           "legendFormat": "Success Rate",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "uid": "total-runs-today",
-      "title": "Total Pipeline Runs Today",
-      "description": "Total number of pipeline run completions in the last 24 hours.",
-      "type": "stat",
-      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "value",
-        "graphMode": "area"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{ "color": "blue", "value": null }]
-          }
-        }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "sum(increase(pipeline_runs_total{environment=\"$environment\"}[24h]))",
-          "legendFormat": "Runs",
           "refId": "A"
         }
       ]
@@ -104,13 +197,25 @@
     {
       "id": 3,
       "uid": "failed-runs-1h",
-      "title": "Failed Runs (Last 1h)",
-      "description": "Number of pipeline failures in the last hour. Non-zero warrants investigation.",
+      "title": "Failed Runs (1h)",
+      "description": "Number of pipeline failures in the last hour. Any non-zero value warrants investigation \u2014 drill into L2.",
       "type": "stat",
-      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "gridPos": {
+        "x": 9,
+        "y": 1,
+        "w": 5,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "none"
       },
@@ -120,17 +225,29 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green",  "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red",    "value": 3 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
             ]
           }
         }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "sum(increase(pipeline_runs_total{status=\"failed\", environment=\"$environment\"}[1h]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "sum(increase(simulator_pipeline_runs_total{status=\"failed\", environment=\"$environment\"}[1h]))",
           "legendFormat": "Failures",
           "refId": "A"
         }
@@ -138,77 +255,1117 @@
     },
     {
       "id": 4,
-      "uid": "avg-run-duration",
-      "title": "Avg Run Duration (24h)",
-      "description": "Average pipeline run duration across all pipelines.",
+      "uid": "sla-breaches-today",
+      "title": "SLA Breaches (24h)",
+      "description": "Runs that exceeded their declared SLA duration. slow-etl consistently breaches its 60s SLA.",
       "type": "stat",
-      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "gridPos": {
+        "x": 14,
+        "y": 1,
+        "w": 5,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "value"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
       },
       "fieldConfig": {
-        "defaults": { "unit": "ms" }
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "avg(pipeline_run_duration_ms{environment=\"$environment\"})",
-          "legendFormat": "Avg Duration",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "sum(increase(simulator_sla_breaches_total{environment=\"$environment\"}[24h]))",
+          "legendFormat": "SLA Breaches",
           "refId": "A"
         }
       ]
     },
     {
       "id": 5,
-      "uid": "pipeline-run-table",
-      "title": "Pipeline Runs",
-      "description": "All pipeline runs in the selected time range. Click a row to open the L2 run detail dashboard.",
-      "type": "table",
-      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 12 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "uid": "dq-violations-today",
+      "title": "DQ Violations (24h)",
+      "description": "Data quality check violations. raw-ingestion has 15% chance of a user_id null spike per run.",
+      "type": "stat",
+      "gridPos": {
+        "x": 19,
+        "y": 1,
+        "w": 5,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
       "options": {
-        "footer": { "show": false },
-        "sortBy": [{ "displayName": "Start Time", "desc": true }]
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
       },
       "fieldConfig": {
-        "defaults": { "custom": { "align": "auto" } },
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "sum(increase(simulator_dq_violations_total{environment=\"$environment\"}[24h]))",
+          "legendFormat": "DQ Violations",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "PIPELINE CATALOG \u2014 one row per pipeline, click traceID below to drill into a run",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 6,
+      "uid": "pipeline-catalog",
+      "title": "Pipeline Registry",
+      "description": "One row per pipeline. Shows name, domain, owner, scenario description, 24h success rate, last run duration, SLA breaches and DQ violations. Click a pipeline_id to filter the runs table below.",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 11
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Pipeline Name",
+            "desc": false
+          }
+        ],
+        "frameIndex": 0,
+        "showHeader": true,
+        "cellHeight": "md"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "noValue": "\u2014"
+        },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "pipeline.status" },
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline_name"
+            },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "displayName",
+                "value": "Pipeline Name"
+              },
+              {
+                "id": "custom.width",
+                "value": 210
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View all runs for this pipeline \u2192",
+                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-pipeline_id=${__data.fields.pipeline_id.value}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline_id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pipeline ID"
+              },
+              {
+                "id": "custom.width",
+                "value": 220
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View all runs for this pipeline \u2192",
+                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-pipeline_id=${__value.raw}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "domain"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Domain"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "customer-data": {
+                        "color": "blue",
+                        "text": "customer-data",
+                        "index": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "risk": {
+                        "color": "orange",
+                        "text": "risk",
+                        "index": 1
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "data-platform": {
+                        "color": "purple",
+                        "text": "data-platform",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Owner"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "description"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Scenario / Description"
+              },
+              {
+                "id": "custom.width",
+                "value": 290
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Success Rate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
               },
               {
                 "id": "thresholds",
                 "value": {
                   "mode": "absolute",
                   "steps": [
-                    { "color": "green", "value": null }
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.75
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.95
+                    }
                   ]
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "\u2014"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "noValue",
+                "value": "\u2014"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SLA Breaches"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 5
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DQ Violations"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 3
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "pipeline_id",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Success Rate",
+            "mode": "binaryOperation",
+            "binary": {
+              "left": "Value #success",
+              "right": "Value #total",
+              "operator": "/"
+            },
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true,
+              "Time 5": true,
+              "__name__": true,
+              "environment": true,
+              "instance": true,
+              "instance 1": true,
+              "instance 2": true,
+              "job": true,
+              "job 1": true,
+              "job 2": true,
+              "Value #info": true,
+              "Value #duration": true
+            },
+            "renameByName": {
+              "Value #success": "Successes (24h)",
+              "Value #total": "Total Runs (24h)",
+              "Value #sla": "SLA Breaches",
+              "Value #dq": "DQ Violations",
+              "simulator_pipeline_last_duration_seconds": "Last Duration"
+            },
+            "indexByName": {
+              "pipeline_name": 0,
+              "pipeline_id": 1,
+              "domain": 2,
+              "owner": 3,
+              "description": 4,
+              "Success Rate": 5,
+              "Last Duration": 6,
+              "SLA Breaches": 7,
+              "DQ Violations": 8
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "simulator_pipeline_info{environment=\"$environment\"}",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "info",
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "sum by (pipeline_id) (increase(simulator_pipeline_runs_total{status=\"success\", environment=\"$environment\"}[24h]))",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "success",
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "sum by (pipeline_id) (increase(simulator_pipeline_runs_total{environment=\"$environment\"}[24h]))",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "total",
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "simulator_pipeline_last_duration_seconds{environment=\"$environment\"}",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "duration",
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "sum by (pipeline_id) (increase(simulator_sla_breaches_total{environment=\"$environment\"}[24h]))",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "sla",
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "sum by (pipeline_id) (increase(simulator_dq_violations_total{environment=\"$environment\"}[24h]))",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "dq",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "PERFORMANCE TRENDS",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 7,
+      "uid": "success-rate-trend",
+      "title": "Success Rate by Pipeline (1h window)",
+      "description": "Pipeline success rate over time. risk-scoring should show ~75%, others ~100%.",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.9
+              },
+              {
+                "color": "green",
+                "value": 0.99
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "min"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "sum by (pipeline_id) (rate(simulator_pipeline_runs_total{status=\"success\", environment=\"$environment\"}[1h])) / sum by (pipeline_id) (rate(simulator_pipeline_runs_total{environment=\"$environment\"}[1h]))",
+          "legendFormat": "{{pipeline_id}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "uid": "job-latency-trend",
+      "title": "Last Run Duration by Pipeline",
+      "description": "Most recent run duration per pipeline. slow-etl will regularly exceed the 60s SLA line.",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "simulator_pipeline_last_duration_seconds{environment=\"$environment\"}",
+          "legendFormat": "{{pipeline_id}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "type": "row",
+      "title": "RECENT PIPELINE RUNS \u2014 Click any traceID to open L2 Pipeline Run Detail",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 9,
+      "uid": "pipeline-run-table",
+      "title": "Pipeline Runs \u2014 click Pipeline to drill down, click Trace ID for direct trace",
+      "description": "All pipeline runs in the selected time range. Click Pipeline name/ID to see all runs for that pipeline in L2. Click Trace ID to jump directly to a specific run trace.",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo-dev"
+      },
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Start Time",
+            "desc": true
+          }
+        ],
+        "cellHeight": "sm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "traceID"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace ID"
+              },
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open this specific run trace \u2192",
+                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-pipeline_id=${__data.fields[\"pipeline.id\"].value}&var-trace_id=${__value.raw}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline.status"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Status"
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
                 }
               },
               {
                 "id": "mappings",
                 "value": [
-                  { "type": "value", "options": { "success":  { "color": "green",  "text": "success"  } } },
-                  { "type": "value", "options": { "failed":   { "color": "red",    "text": "failed"   } } },
-                  { "type": "value", "options": { "running":  { "color": "blue",   "text": "running"  } } },
-                  { "type": "value", "options": { "cancelled":{ "color": "grey",   "text": "cancelled"} } }
+                  {
+                    "type": "value",
+                    "options": {
+                      "success": {
+                        "color": "green",
+                        "text": "success"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "failed": {
+                        "color": "red",
+                        "text": "failed"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "running": {
+                        "color": "blue",
+                        "text": "running"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline.name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pipeline Name"
+              },
+              {
+                "id": "custom.width",
+                "value": 210
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline.id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pipeline ID"
+              },
+              {
+                "id": "custom.width",
+                "value": 210
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "displayName",
+                "value": "Duration"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "startTime"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "displayName",
+                "value": "Started"
+              },
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline.name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pipeline"
+              },
+              {
+                "id": "custom.width",
+                "value": 210
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View all runs for this pipeline \u2192",
+                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-pipeline_id=${__data.fields[\"pipeline.id\"].value}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline.id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "ID"
+              },
+              {
+                "id": "custom.width",
+                "value": 210
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View all runs for this pipeline \u2192",
+                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-pipeline_id=${__value.raw}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline.status"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Status"
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "success": {
+                        "color": "green",
+                        "text": "success"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "failed": {
+                        "color": "red",
+                        "text": "failed"
+                      }
+                    }
+                  }
                 ]
               }
             ]
           }
         ]
       },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "spanID": true,
+              "parentSpanID": true,
+              "kind": true,
+              "statusMessage": true,
+              "instrumentationLibraryName": true,
+              "instrumentationLibraryVersion": true,
+              "traceState": true,
+              "serviceTags": true,
+              "logs": true,
+              "references": true,
+              "serviceName": true,
+              "tags": true,
+              "pipeline.type": true,
+              "deployment.environment": true,
+              "pipeline.run_id": true
+            },
+            "renameByName": {
+              "traceID": "Trace ID",
+              "pipeline.name": "Pipeline",
+              "pipeline.id": "ID",
+              "pipeline.status": "Status",
+              "duration": "Duration",
+              "startTime": "Started"
+            },
+            "indexByName": {
+              "pipeline.name": 0,
+              "pipeline.id": 1,
+              "pipeline.status": 2,
+              "duration": 3,
+              "startTime": 4,
+              "traceID": 5
+            }
+          }
+        }
+      ],
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo-dev"
+          },
           "queryType": "traceql",
-          "query": "{span.deployment.environment=\"$environment\" && name=\"pipeline.run\"}",
+          "query": "{span.deployment.environment=\"$environment\" && name=\"pipeline.run\"} | select(span.pipeline.name, span.pipeline.id, span.pipeline.status)",
           "refId": "A",
           "tableType": "spans",
           "limit": 100
@@ -216,52 +1373,487 @@
       ]
     },
     {
-      "id": 6,
-      "uid": "success-rate-trend",
-      "title": "Success Rate Trend",
-      "description": "Pipeline success rate over the selected time range.",
-      "type": "timeseries",
-      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "id": 104,
+      "type": "row",
+      "title": "OBSERVABILITY STACK HEALTH \u2014 Full infra metrics: Infrastructure Dashboard \u2192",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 10,
+      "uid": "infra-link",
+      "title": "Infrastructure Dashboard",
+      "description": "Full infrastructure metrics: collector throughput, memory, goroutines, scrape health.",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 6,
+        "h": 4
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "## [\ud83d\udcca Infrastructure \u2192](/d/watch-l3-infra)\n\nFull metrics: collector throughput, memory, goroutines, scrape health, service uptime.\n\n[Open L3 Infrastructure Dashboard \u2192](/d/watch-l3-infra)"
+      }
+    },
+    {
+      "id": 11,
+      "uid": "svc-collector",
+      "title": "OTel Collector",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 40,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit",
-          "min": 0, "max": 1,
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "color": "green",
+                  "text": "UP"
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "DOWN"
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red",    "value": null },
-              { "color": "yellow", "value": 0.95 },
-              { "color": "green",  "value": 0.99 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           }
         }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "sum by (pipeline_id) (rate(pipeline_runs_total{status=\"success\", environment=\"$environment\"}[1h])) / sum by (pipeline_id) (rate(pipeline_runs_total{environment=\"$environment\"}[1h]))",
-          "legendFormat": "{{pipeline_id}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "up{job=\"collector\"}",
+          "legendFormat": "Collector",
           "refId": "A"
         }
       ]
     },
     {
-      "id": 7,
-      "uid": "job-latency-trend",
-      "title": "Pipeline Run Duration (p95)",
-      "description": "95th percentile run duration per pipeline over time.",
-      "type": "timeseries",
-      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "id": 12,
+      "uid": "svc-pipeline-sim",
+      "title": "Pipeline Simulator",
+      "type": "stat",
+      "gridPos": {
+        "x": 10,
+        "y": 40,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
       "fieldConfig": {
-        "defaults": { "unit": "ms" }
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "color": "green",
+                  "text": "UP"
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "DOWN"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "histogram_quantile(0.95, sum by (pipeline_id, le) (rate(pipeline_run_duration_ms_bucket{environment=\"$environment\"}[1h])))",
-          "legendFormat": "{{pipeline_id}} p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "up{job=\"pipeline-simulator\"}",
+          "legendFormat": "Pipeline Simulator",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "uid": "svc-streaming-sim",
+      "title": "Streaming Simulator",
+      "type": "stat",
+      "gridPos": {
+        "x": 14,
+        "y": 40,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "color": "green",
+                  "text": "UP"
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "DOWN"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "up{job=\"streaming-simulator\"}",
+          "legendFormat": "Streaming Simulator",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "uid": "svc-prometheus",
+      "title": "Prometheus",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 40,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "color": "green",
+                  "text": "UP"
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "DOWN"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "up{job=\"prometheus\"}",
+          "legendFormat": "Prometheus",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "uid": "collector-goroutines",
+      "title": "Collector Goroutines",
+      "description": "OTel collector goroutine count. Sustained growth may indicate span processing backlog.",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 8,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "go_goroutines{job=\"collector\"}",
+          "legendFormat": "collector goroutines",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "uid": "service-memory",
+      "title": "Service Heap Memory",
+      "description": "Heap memory in use for each instrumented service.",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 8,
+        "y": 44,
+        "w": 8,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 2
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "go_memstats_heap_alloc_bytes{job=\"collector\"}",
+          "legendFormat": "collector",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "process_resident_memory_bytes{job=\"prometheus\"}",
+          "legendFormat": "prometheus",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "uid": "scrape-success",
+      "title": "Scrape Success by Target",
+      "description": "Whether each Prometheus scrape target was successfully scraped in the last interval.",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 16,
+        "y": 44,
+        "w": 8,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "lineWidth": 2
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "color": "green",
+                  "text": "OK"
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "FAIL"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "up",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ]

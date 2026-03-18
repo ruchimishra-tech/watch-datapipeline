@@ -19,6 +19,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://collector:4317"
       WATCH_DEPLOYMENT_ENVIRONMENT: "docker-dev"
       SIMULATOR_METRICS_PORT: "8099"
+      WATCH_STATE_STORE_PATH: "/tmp/run_state.db"
       # Uncomment to run only one scenario for debugging:
       # SIMULATOR_SCENARIO: "risk-scoring"
     ports:
@@ -43,6 +44,7 @@ services:
       WATCH_DEPLOYMENT_ENVIRONMENT: "docker-dev"
       STREAMING_METRICS_PORT: "8098"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://collector:4317"
+      WATCH_STATE_STORE_PATH: "/tmp/run_state.db"
     ports:
       - "8098:8098"
     networks:

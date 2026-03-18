@@ -1,0 +1,279 @@
+groups:
+
+  # ── Portfolio-level health ─────────────────────────────────────────────────
+  - name: banking.marketplace.health
+    interval: 30s
+    rules:
+
+      - alert: DataProductDown
+        expr: data_product_availability{environment="docker-dev"} < 0.80
+        for: 1m
+        labels:
+          severity: critical
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} availability critical ({{ $labels.portfolio }})"
+          description: >
+            {{ $labels.product }} in portfolio {{ $labels.portfolio }} has availability
+            {{ $value | humanizePercentage }} — below 80% critical threshold.
+            Owner: {{ $labels.owner }}. Possible causes: service crash, upstream dependency
+            failure, or overnight batch incident.
+
+      - alert: DataProductDegraded
+        expr: |
+          data_product_availability{environment="docker-dev"} >= 0.80
+          and
+          data_product_availability{environment="docker-dev"} < 0.995
+        for: 1m
+        labels:
+          severity: warning
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} availability degraded ({{ $labels.portfolio }})"
+          description: >
+            {{ $labels.product }} availability {{ $value | humanizePercentage }} is below
+            SLA target. Domain: {{ $labels.domain }}. Owner: {{ $labels.owner }}.
+
+      - alert: DataProductHealthScoreCritical
+        expr: data_product_health_score{environment="docker-dev"} < 0.70
+        for: 1m
+        labels:
+          severity: critical
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} health score critical: {{ $value | humanize }}"
+          description: >
+            Composite health score for {{ $labels.product }} ({{ $labels.portfolio }}) has
+            fallen below 0.70. Investigate availability, latency, freshness, and error rate
+            dimensions. Owner: {{ $labels.owner }}.
+
+      - alert: DataProductHealthScoreDegraded
+        expr: |
+          data_product_health_score{environment="docker-dev"} >= 0.70
+          and
+          data_product_health_score{environment="docker-dev"} < 0.90
+        for: 1m
+        labels:
+          severity: warning
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} health score degraded: {{ $value | humanize }}"
+          description: >
+            Health score {{ $value | humanize }} for {{ $labels.product }}
+            ({{ $labels.domain }}) is below healthy threshold of 0.90.
+
+  # ── Latency SLA ────────────────────────────────────────────────────────────
+  - name: banking.marketplace.latency
+    interval: 30s
+    rules:
+
+      - alert: DataProductLatencyBreachCritical
+        # Fires when latency exceeds 3× SLA baseline for the product's typical range
+        expr: |
+          data_product_latency_p95_ms{environment="docker-dev", product="fraud-detection-engine"} > 300
+          or
+          data_product_latency_p95_ms{environment="docker-dev", product="transaction-risk-scoring"} > 200
+          or
+          data_product_latency_p95_ms{environment="docker-dev", product="payments-settlement"} > 500
+        for: 1m
+        labels:
+          severity: critical
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} latency critical: {{ $value | humanize }}ms"
+          description: >
+            Real-time product {{ $labels.product }} ({{ $labels.portfolio }}) has p95 latency
+            {{ $value | humanize }}ms exceeding critical threshold. This may impact downstream
+            payment authorisation or fraud scoring SLAs.
+
+      - alert: DataProductLatencyElevated
+        expr: |
+          data_product_latency_p95_ms{environment="docker-dev"}
+          > on(product) group_left()
+          (data_product_latency_p95_ms{environment="docker-dev"} * 2.5)
+        for: 1m
+        labels:
+          severity: info
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} latency 2.5× baseline"
+          description: >
+            {{ $labels.product }} p95 latency {{ $value | humanize }}ms is elevated.
+            Check for peak load scenarios (market open, EOD, settlement window).
+
+  # ── Data freshness ─────────────────────────────────────────────────────────
+  - name: banking.marketplace.freshness
+    interval: 60s
+    rules:
+
+      - alert: DataProductStaleCritical
+        expr: |
+          (data_product_freshness_seconds{environment="docker-dev", product="customer-360"} > 3600)
+          or
+          (data_product_freshness_seconds{environment="docker-dev", product="fraud-detection-engine"} > 300)
+          or
+          (data_product_freshness_seconds{environment="docker-dev", product="payments-settlement"} > 1800)
+          or
+          (data_product_freshness_seconds{environment="docker-dev", product="treasury-liquidity"} > 900)
+          or
+          (data_product_freshness_seconds{environment="docker-dev", product="transaction-risk-scoring"} > 600)
+        for: 1m
+        labels:
+          severity: critical
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} data is stale: {{ $value | humanizeDuration }}"
+          description: >
+            {{ $labels.product }} ({{ $labels.domain }}) data freshness {{ $value | humanizeDuration }}
+            exceeds SLA. Stale data in this product may cause incorrect decisions in downstream
+            consumers. Owner: {{ $labels.owner }}.
+
+      - alert: DataProductStaleWarning
+        expr: |
+          data_product_freshness_seconds{environment="docker-dev", product="aml-monitoring"} > 86400
+          or
+          data_product_freshness_seconds{environment="docker-dev", product="credit-risk-models"} > 43200
+          or
+          data_product_freshness_seconds{environment="docker-dev", product="investment-analytics"} > 21600
+        for: 1m
+        labels:
+          severity: warning
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} batch data overdue: {{ $value | humanizeDuration }}"
+          description: >
+            {{ $labels.product }} freshness {{ $value | humanizeDuration }} exceeds expected
+            batch delivery window. May indicate upstream pipeline failure or regulatory scan delay.
+
+  # ── Error rate ─────────────────────────────────────────────────────────────
+  - name: banking.marketplace.errors
+    interval: 30s
+    rules:
+
+      - alert: DataProductErrorRateCritical
+        expr: data_product_error_rate{environment="docker-dev"} > 0.10
+        for: 1m
+        labels:
+          severity: critical
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} error rate critical: {{ $value | humanizePercentage }}"
+          description: >
+            {{ $labels.product }} ({{ $labels.portfolio }}) error rate has exceeded 10%.
+            This is likely an active incident. Owner: {{ $labels.owner }}.
+            Possible causes: payments batch failure, model inference errors, upstream API down.
+
+      - alert: DataProductErrorRateElevated
+        expr: |
+          data_product_error_rate{environment="docker-dev"} > 0.02
+          and
+          data_product_error_rate{environment="docker-dev"} <= 0.10
+        for: 1m
+        labels:
+          severity: warning
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} error rate elevated: {{ $value | humanizePercentage }}"
+          description: >
+            {{ $labels.product }} error rate {{ $value | humanizePercentage }} is above
+            2% warning threshold. Domain: {{ $labels.domain }}. Owner: {{ $labels.owner }}.
+
+      - alert: FraudModelDriftDetected
+        expr: data_product_error_rate{product="transaction-risk-scoring", environment="docker-dev"} > 0.08
+        for: 1m
+        labels:
+          severity: warning
+          tier: marketplace
+          runbook: "runbook/fraud-model-drift"
+        annotations:
+          summary: "Transaction Risk Scoring model drift detected (error rate {{ $value | humanizePercentage }})"
+          description: >
+            Transaction Risk Scoring error rate {{ $value | humanizePercentage }} suggests
+            model drift. XGBoost model may require retraining. Current 7-day cycle phase
+            indicates drift peak. Schedule model refresh with risk-scoring-team.
+
+  # ── SLO compliance ─────────────────────────────────────────────────────────
+  - name: banking.marketplace.slo
+    interval: 60s
+    rules:
+
+      - alert: SLOComplianceBreach
+        expr: data_product_slo_compliance_ratio{environment="docker-dev"} < 0.99
+        for: 1m
+        labels:
+          severity: warning
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} SLO compliance below 99%: {{ $value | humanizePercentage }}"
+          description: >
+            Rolling SLO compliance for {{ $labels.product }} ({{ $labels.portfolio }}) is
+            {{ $value | humanizePercentage }}. At this rate the error budget will be exhausted.
+            Owner: {{ $labels.owner }}.
+
+      - alert: SLOComplianceCritical
+        expr: data_product_slo_compliance_ratio{environment="docker-dev"} < 0.95
+        for: 1m
+        labels:
+          severity: critical
+          tier: marketplace
+        annotations:
+          summary: "{{ $labels.product }} SLO compliance critical: {{ $value | humanizePercentage }}"
+          description: >
+            {{ $labels.product }} SLO compliance has fallen to {{ $value | humanizePercentage }}.
+            Error budget is exhausted. Escalate to {{ $labels.owner }} and portfolio owner.
+
+  # ── Payments-specific: settlement incident ─────────────────────────────────
+  - name: banking.marketplace.payments
+    interval: 15s
+    rules:
+
+      - alert: PaymentsSettlementBatchFailed
+        expr: |
+          data_product_availability{product="payments-settlement", environment="docker-dev"} < 0.85
+          and
+          data_product_error_rate{product="payments-settlement", environment="docker-dev"} > 0.10
+        for: 1m
+        labels:
+          severity: critical
+          tier: marketplace
+          runbook: "runbook/payments-settlement-batch-failure"
+        annotations:
+          summary: "PAYMENTS SETTLEMENT BATCH FAILURE — availability {{ $value | humanizePercentage }}"
+          description: >
+            Payments Settlement has availability below 85% AND error rate above 10%.
+            This indicates the overnight CHAPS/BACS settlement batch has failed.
+            Immediate action required from payments-ops-team. Check settlement window
+            database lock contention and retry batch from last checkpoint.
+
+  # ── Fraud & FinCrime: real-time scoring ────────────────────────────────────
+  - name: banking.marketplace.fraud
+    interval: 15s
+    rules:
+
+      - alert: FraudDetectionLatencyBreached
+        expr: data_product_latency_p95_ms{product="fraud-detection-engine", environment="docker-dev"} > 250
+        for: 1m
+        labels:
+          severity: critical
+          tier: marketplace
+          runbook: "runbook/fraud-detection-latency"
+        annotations:
+          summary: "Fraud Detection Engine latency {{ $value | humanize }}ms — payment auth at risk"
+          description: >
+            Fraud Detection p95 latency {{ $value | humanize }}ms exceeds 250ms SLA.
+            Payment authorisation timeouts may be occurring. Peak transaction load suspected.
+            Investigate model inference queue depth and GPU/CPU utilisation.
+
+      - alert: AMLScanDelayDetected
+        expr: data_product_freshness_seconds{product="aml-monitoring", environment="docker-dev"} > 43200
+        for: 1m
+        labels:
+          severity: warning
+          tier: marketplace
+          runbook: "runbook/aml-scan-delay"
+        annotations:
+          summary: "AML Monitoring data stale: {{ $value | humanizeDuration }}"
+          description: >
+            AML Monitoring data is {{ $value | humanizeDuration }} old. This may indicate
+            the weekly sanctions screening batch or monthly regulatory scan is running.
+            Verify with fincrime-team that this is planned maintenance.

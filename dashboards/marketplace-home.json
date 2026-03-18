@@ -1,0 +1,1066 @@
+{
+  "uid": "marketplace-home",
+  "title": "Data Marketplace — Observability Platform",
+  "description": "Control plane homepage: global health, portfolio tiles, product catalog drill-down, health heatmap, and active incidents. RBAC-ready.",
+  "tags": ["marketplace", "home", "observability", "control-plane"],
+  "schemaVersion": 38,
+  "version": 4,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "type": "custom",
+        "query": "docker-dev,dev,test,prod",
+        "options": [
+          { "text": "docker-dev", "value": "docker-dev", "selected": true },
+          { "text": "dev",        "value": "dev",        "selected": false },
+          { "text": "test",       "value": "test",       "selected": false },
+          { "text": "prod",       "value": "prod",       "selected": false }
+        ],
+        "current": { "text": "docker-dev", "value": "docker-dev" },
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      },
+      {
+        "name": "portfolio",
+        "label": "Portfolio",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "query": "query_result(group by (portfolio) (data_product_health_score{environment=\"$environment\"}))",
+        "definition": "query_result(group by (portfolio) (data_product_health_score{environment=\"$environment\"}))",
+        "regex": "/.*portfolio=\"([^\"]+)\".*/",
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": false,
+        "hide": 0,
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "domain",
+        "label": "Domain",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "query": "query_result(group by (domain) (data_product_health_score{environment=\"$environment\",portfolio=~\"$portfolio\"}))",
+        "definition": "query_result(group by (domain) (data_product_health_score{environment=\"$environment\",portfolio=~\"$portfolio\"}))",
+        "regex": "/.*domain=\"([^\"]+)\".*/",
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": false,
+        "hide": 0,
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "product",
+        "label": "Product",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "query": "query_result(group by (product) (data_product_health_score{environment=\"$environment\",portfolio=~\"$portfolio\",domain=~\"$domain\"}))",
+        "definition": "query_result(group by (product) (data_product_health_score{environment=\"$environment\",portfolio=~\"$portfolio\",domain=~\"$domain\"}))",
+        "regex": "/.*product=\"([^\"]+)\".*/",
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "hide": 0,
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "owner",
+        "label": "Owner",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "query": "query_result(group by (owner) (data_product_health_score{environment=\"$environment\",portfolio=~\"$portfolio\"}))",
+        "definition": "query_result(group by (owner) (data_product_health_score{environment=\"$environment\",portfolio=~\"$portfolio\"}))",
+        "regex": "/.*owner=\"([^\"]+)\".*/",
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": false,
+        "hide": 0,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+
+  "panels": [
+
+    {
+      "id": 1,
+      "type": "text",
+      "title": "",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+      "transparent": true,
+      "options": {
+        "mode": "markdown",
+        "content": "# Data Marketplace &nbsp;·&nbsp; Observability Platform\n\nReal-time health across all data products &mdash; **SLA compliance** &nbsp;·&nbsp; **freshness** &nbsp;·&nbsp; **availability** &nbsp;·&nbsp; **active incidents**.\n\nFilter by **Environment · Portfolio · Domain · Owner** above &nbsp;·&nbsp; Drill down: click any portfolio or product name &nbsp;·&nbsp; Red = action needed now."
+      }
+    },
+
+    {
+      "id": 2,
+      "uid": "mp-kpi-total",
+      "title": "Total Data Products",
+      "description": "Count of registered data products matching current filters.",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 3, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "blue", "value": null }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "count(group by (portfolio, domain, product) (data_product_health_score{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"}))",
+        "legendFormat": "Products",
+        "refId": "A",
+        "instant": true
+      }]
+    },
+
+    {
+      "id": 3,
+      "uid": "mp-kpi-healthy",
+      "title": "Healthy",
+      "description": "Products with health score ≥ 95%.",
+      "type": "stat",
+      "gridPos": { "x": 4, "y": 3, "w": 3, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "count(data_product_health_score{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"} >= 0.95) or vector(0)",
+        "legendFormat": "Healthy",
+        "refId": "A",
+        "instant": true
+      }]
+    },
+
+    {
+      "id": 4,
+      "uid": "mp-kpi-degraded",
+      "title": "Degraded",
+      "description": "Products with health score between 75% and 95% — watch closely.",
+      "type": "stat",
+      "gridPos": { "x": 7, "y": 3, "w": 3, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "count(data_product_health_score{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"} >= 0.75 < 0.95) or vector(0)",
+        "legendFormat": "Degraded",
+        "refId": "A",
+        "instant": true
+      }]
+    },
+
+    {
+      "id": 5,
+      "uid": "mp-kpi-failed",
+      "title": "Failed",
+      "description": "Products with health score below 75% — immediate attention required.",
+      "type": "stat",
+      "gridPos": { "x": 10, "y": 3, "w": 3, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red",    "value": 3 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "count(data_product_health_score{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"} < 0.75) or vector(0)",
+        "legendFormat": "Failed",
+        "refId": "A",
+        "instant": true
+      }]
+    },
+
+    {
+      "id": 6,
+      "uid": "mp-kpi-slo",
+      "title": "SLO Compliance",
+      "description": "Average SLO compliance ratio across all filtered data products.",
+      "type": "stat",
+      "gridPos": { "x": 13, "y": 3, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",    "value": null },
+            { "color": "yellow", "value": 0.95 },
+            { "color": "green",  "value": 0.99 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "avg(data_product_slo_compliance_ratio{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"})",
+        "legendFormat": "SLO",
+        "refId": "A",
+        "instant": true
+      }]
+    },
+
+    {
+      "id": 7,
+      "uid": "mp-kpi-incidents",
+      "title": "Active Incidents",
+      "description": "Products currently below healthy threshold (health score < 75%).",
+      "type": "stat",
+      "gridPos": { "x": 17, "y": 3, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red",    "value": 3 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "count(data_product_health_score{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"} < 0.75) or vector(0)",
+        "legendFormat": "Incidents",
+        "refId": "A",
+        "instant": true
+      }]
+    },
+
+    {
+      "id": 8,
+      "uid": "mp-kpi-freshness",
+      "title": "Freshness Breaches",
+      "description": "Products whose data freshness exceeds 1 hour.",
+      "type": "stat",
+      "gridPos": { "x": 21, "y": 3, "w": 3, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red",    "value": 3 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "count(data_product_freshness_seconds{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"} > 3600) or vector(0)",
+        "legendFormat": "Breaches",
+        "refId": "A",
+        "instant": true
+      }]
+    },
+
+    {
+      "id": 100,
+      "type": "row",
+      "title": "PORTFOLIO OVERVIEW",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 7, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 10,
+      "uid": "mp-portfolio-table",
+      "title": "Portfolio Health Summary",
+      "description": "One row per portfolio. Average health score, product count, SLO compliance and products in incident. Click the portfolio name to filter the rest of the dashboard.",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 8, "w": 14, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "footer": { "show": false },
+        "showHeader": true,
+        "cellHeight": "md",
+        "sortBy": [{ "displayName": "Health Score", "desc": false }]
+      },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "portfolio" },
+            "properties": [
+              { "id": "displayName", "value": "Portfolio" },
+              { "id": "custom.width", "value": 200 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #A" },
+            "properties": [
+              { "id": "displayName", "value": "Health Score" },
+              { "id": "unit", "value": "percentunit" },
+              { "id": "decimals", "value": 2 },
+              { "id": "custom.width", "value": 130 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 0.75 },
+                { "color": "green", "value": 0.95 }
+              ]}}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #B" },
+            "properties": [
+              { "id": "displayName", "value": "Products" },
+              { "id": "unit", "value": "short" },
+              { "id": "decimals", "value": 0 },
+              { "id": "custom.width", "value": 90 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #C" },
+            "properties": [
+              { "id": "displayName", "value": "Failed Products" },
+              { "id": "unit", "value": "short" },
+              { "id": "decimals", "value": 0 },
+              { "id": "custom.width", "value": 120 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "red", "value": 2 }
+              ]}}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #D" },
+            "properties": [
+              { "id": "displayName", "value": "SLO %" },
+              { "id": "unit", "value": "percentunit" },
+              { "id": "decimals", "value": 2 },
+              { "id": "custom.width", "value": 110 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 0.95 },
+                { "color": "green", "value": 0.99 }
+              ]}}
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        { "id": "joinByField", "options": { "byField": "portfolio", "mode": "outer" } },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true, "Time 1": true, "Time 2": true, "Time 3": true,
+              "environment": true, "instance": true, "job": true
+            },
+            "renameByName": {},
+            "indexByName": {
+              "portfolio": 0, "Value #A": 1, "Value #B": 2, "Value #C": 3, "Value #D": 4
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "avg by (portfolio) (data_product_health_score{portfolio=~\"$portfolio\",environment=\"$environment\",owner=~\"$owner\"})",
+          "legendFormat": "{{portfolio}}",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "count by (portfolio) (group by (portfolio, product) (data_product_health_score{portfolio=~\"$portfolio\",environment=\"$environment\",owner=~\"$owner\"}))",
+          "legendFormat": "{{portfolio}}",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "sum by (portfolio) (data_product_health_score{portfolio=~\"$portfolio\",environment=\"$environment\",owner=~\"$owner\"} < bool 0.75)",
+          "legendFormat": "{{portfolio}}",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "avg by (portfolio) (data_product_slo_compliance_ratio{portfolio=~\"$portfolio\",environment=\"$environment\",owner=~\"$owner\"})",
+          "legendFormat": "{{portfolio}}",
+          "refId": "D",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 11,
+      "uid": "mp-portfolio-gauge",
+      "title": "Health Score by Portfolio",
+      "description": "Average health score per portfolio. Green ≥ 95% · Yellow ≥ 75% · Red < 75%.",
+      "type": "bargauge",
+      "gridPos": { "x": 14, "y": 8, "w": 10, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "minVizWidth": 0,
+        "minVizHeight": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",    "value": null },
+            { "color": "yellow", "value": 0.75 },
+            { "color": "green",  "value": 0.95 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "avg by (portfolio) (data_product_health_score{portfolio=~\"$portfolio\",environment=\"$environment\",owner=~\"$owner\"})",
+        "legendFormat": "{{portfolio}}",
+        "refId": "A",
+        "instant": true,
+        "range": false
+      }]
+    },
+
+    {
+      "id": 101,
+      "type": "row",
+      "title": "DATA PRODUCT CATALOG",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 17, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 12,
+      "uid": "mp-catalog-table",
+      "title": "Data Product Catalog — worst health first",
+      "description": "Full product registry scoped to current filters. Red rows need immediate attention.",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 18, "w": 24, "h": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "footer": { "show": false },
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [{ "displayName": "Health Score", "desc": false }]
+      },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "filterable": true } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "product" },
+            "properties": [
+              { "id": "displayName", "value": "Product" },
+              { "id": "custom.width", "value": 220 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "portfolio" },
+            "properties": [
+              { "id": "displayName", "value": "Portfolio" },
+              { "id": "custom.width", "value": 180 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "domain" },
+            "properties": [
+              { "id": "displayName", "value": "Domain" },
+              { "id": "custom.width", "value": 160 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "owner" },
+            "properties": [
+              { "id": "displayName", "value": "Owner" },
+              { "id": "custom.width", "value": 170 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #A" },
+            "properties": [
+              { "id": "displayName", "value": "Health Score" },
+              { "id": "unit", "value": "percentunit" },
+              { "id": "decimals", "value": 2 },
+              { "id": "custom.width", "value": 130 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 0.75 },
+                { "color": "green", "value": 0.95 }
+              ]}}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #B" },
+            "properties": [
+              { "id": "displayName", "value": "SLO Compliance" },
+              { "id": "unit", "value": "percentunit" },
+              { "id": "decimals", "value": 2 },
+              { "id": "custom.width", "value": 140 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 0.95 },
+                { "color": "green", "value": 0.99 }
+              ]}}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #C" },
+            "properties": [
+              { "id": "displayName", "value": "Freshness" },
+              { "id": "unit", "value": "dtdurations" },
+              { "id": "decimals", "value": 0 },
+              { "id": "custom.width", "value": 150 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "green",  "value": null },
+                { "color": "yellow", "value": 3600 },
+                { "color": "red",    "value": 86400 }
+              ]}}
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        { "id": "joinByField", "options": { "byField": "product", "mode": "outer" } },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true, "Time 1": true, "Time 2": true,
+              "environment": true, "environment 1": true, "environment 2": true,
+              "instance": true, "job": true,
+              "portfolio 1": true, "portfolio 2": true,
+              "domain 1": true, "domain 2": true,
+              "owner 1": true, "owner 2": true
+            },
+            "renameByName": {},
+            "indexByName": {
+              "product": 0, "portfolio": 1, "domain": 2, "owner": 3,
+              "Value #A": 4, "Value #B": 5, "Value #C": 6
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "avg by (portfolio, domain, product, owner) (data_product_health_score{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",owner=~\"$owner\",environment=\"$environment\"})",
+          "legendFormat": "{{product}}",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "avg by (portfolio, domain, product, owner) (data_product_slo_compliance_ratio{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",owner=~\"$owner\",environment=\"$environment\"})",
+          "legendFormat": "{{product}}",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "avg by (portfolio, domain, product, owner) (data_product_freshness_seconds{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",owner=~\"$owner\",environment=\"$environment\"})",
+          "legendFormat": "{{product}}",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 102,
+      "type": "row",
+      "title": "HEALTH HEATMAP — Product × Dimension",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 30, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 13,
+      "uid": "mp-heatmap",
+      "title": "Health Heatmap — Availability · Latency p95 · Freshness · Error Rate",
+      "description": "Matrix: each row = one data product, each column = one health dimension. Green = healthy, Yellow = warning, Red = critical. Scan rows to spot multi-dimension failures.",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 31, "w": 24, "h": 10 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "footer": { "show": false },
+        "showHeader": true,
+        "cellHeight": "md",
+        "sortBy": [{ "displayName": "Availability", "desc": false }]
+      },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "center" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "product" },
+            "properties": [
+              { "id": "displayName", "value": "Product" },
+              { "id": "custom.width", "value": 220 },
+              { "id": "custom.align", "value": "left" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #A" },
+            "properties": [
+              { "id": "displayName", "value": "Availability" },
+              { "id": "unit", "value": "percentunit" },
+              { "id": "decimals", "value": 3 },
+              { "id": "custom.width", "value": 120 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "red",    "value": null },
+                { "color": "yellow", "value": 0.99 },
+                { "color": "green",  "value": 0.999 }
+              ]}}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #B" },
+            "properties": [
+              { "id": "displayName", "value": "Latency p95 (ms)" },
+              { "id": "unit", "value": "ms" },
+              { "id": "decimals", "value": 0 },
+              { "id": "custom.width", "value": 140 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "green",  "value": null },
+                { "color": "yellow", "value": 300 },
+                { "color": "red",    "value": 1000 }
+              ]}}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #C" },
+            "properties": [
+              { "id": "displayName", "value": "Freshness" },
+              { "id": "unit", "value": "dtdurations" },
+              { "id": "decimals", "value": 0 },
+              { "id": "custom.width", "value": 150 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "green",  "value": null },
+                { "color": "yellow", "value": 3600 },
+                { "color": "red",    "value": 86400 }
+              ]}}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #D" },
+            "properties": [
+              { "id": "displayName", "value": "Error Rate" },
+              { "id": "unit", "value": "percentunit" },
+              { "id": "decimals", "value": 3 },
+              { "id": "custom.width", "value": 120 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "green",  "value": null },
+                { "color": "yellow", "value": 0.01 },
+                { "color": "red",    "value": 0.05 }
+              ]}}
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        { "id": "joinByField", "options": { "byField": "product", "mode": "outer" } },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true, "Time 1": true, "Time 2": true, "Time 3": true,
+              "environment": true, "environment 1": true, "environment 2": true,
+              "environment 3": true, "instance": true, "job": true
+            },
+            "renameByName": {},
+            "indexByName": {
+              "product": 0, "Value #A": 1, "Value #B": 2, "Value #C": 3, "Value #D": 4
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "avg by (product) (data_product_availability{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"})",
+          "legendFormat": "{{product}}",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "avg by (product) (data_product_latency_p95_ms{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"})",
+          "legendFormat": "{{product}}",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "avg by (product) (data_product_freshness_seconds{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"})",
+          "legendFormat": "{{product}}",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "avg by (product) (data_product_error_rate{portfolio=~\"$portfolio\",domain=~\"$domain\",product=~\"$product\",environment=\"$environment\"})",
+          "legendFormat": "{{product}}",
+          "refId": "D",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 103,
+      "type": "row",
+      "title": "ALERTS & INCIDENTS",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 41, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 20,
+      "uid": "mp-alert-count-total",
+      "title": "Active Alerts",
+      "description": "Total firing alerts across all products. Green = all clear. Yellow/Red = action required.",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 42, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red",    "value": 5 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "count(ALERTS{alertstate=\"firing\"}) or vector(0)",
+        "legendFormat": "Firing Now",
+        "refId": "A",
+        "instant": true,
+        "range": false
+      }]
+    },
+
+    {
+      "id": 21,
+      "uid": "mp-alert-count-critical",
+      "title": "Critical",
+      "description": "Firing alerts with severity=critical.",
+      "type": "stat",
+      "gridPos": { "x": 5, "y": 42, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "red",   "value": 1 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "count(ALERTS{alertstate=\"firing\",severity=\"critical\"}) or vector(0)",
+        "legendFormat": "Critical",
+        "refId": "A",
+        "instant": true,
+        "range": false
+      }]
+    },
+
+    {
+      "id": 22,
+      "uid": "mp-alert-count-warning",
+      "title": "Warning",
+      "description": "Firing alerts with severity=warning.",
+      "type": "stat",
+      "gridPos": { "x": 9, "y": 42, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 1 }
+          ]}
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "count(ALERTS{alertstate=\"firing\",severity=\"warning\"}) or vector(0)",
+        "legendFormat": "Warning",
+        "refId": "A",
+        "instant": true,
+        "range": false
+      }]
+    },
+
+    {
+      "id": 23,
+      "uid": "mp-alert-status-text",
+      "title": "System Status",
+      "type": "text",
+      "gridPos": { "x": 13, "y": 42, "w": 11, "h": 4 },
+      "transparent": false,
+      "options": {
+        "mode": "markdown",
+        "content": "**All Clear** — No critical alerts firing &nbsp;·&nbsp; Last evaluated: every 30s\n\nStat panels above always show the live count. Table below lists each firing alert with full context. When no alerts are firing, all three counters read **0** and the table is intentionally empty."
+      }
+    },
+
+    {
+      "id": 14,
+      "uid": "mp-alerts-table",
+      "title": "Firing Alerts — detail",
+      "description": "One row per firing alert. Empty = all products healthy. CRITICAL (red) requires immediate action; WARNING (yellow) requires monitoring.",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 46, "w": 15, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "footer": { "show": false },
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [{ "displayName": "Severity", "desc": true }]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "left" },
+          "noValue": "—"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "alertname" },
+            "properties": [
+              { "id": "displayName", "value": "Alert" },
+              { "id": "custom.width", "value": 260 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "severity" },
+            "properties": [
+              { "id": "displayName", "value": "Severity" },
+              { "id": "custom.width", "value": 100 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
+              { "id": "mappings", "value": [{
+                "type": "value",
+                "options": {
+                  "critical": { "color": "red",    "text": "CRITICAL", "index": 0 },
+                  "warning":  { "color": "yellow", "text": "WARNING",  "index": 1 },
+                  "info":     { "color": "blue",   "text": "INFO",     "index": 2 }
+                }
+              }]}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "product" },
+            "properties": [
+              { "id": "displayName", "value": "Product" },
+              { "id": "custom.width", "value": 190 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "portfolio" },
+            "properties": [
+              { "id": "displayName", "value": "Portfolio" },
+              { "id": "custom.width", "value": 170 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [{ "id": "custom.hidden", "value": true }]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true, "__name__": true, "alertstate": true,
+              "instance": true, "job": true, "owner": true,
+              "domain": true, "tier": true, "runbook": true, "environment": true
+            },
+            "renameByName": {},
+            "indexByName": {
+              "alertname": 0, "severity": 1, "portfolio": 2, "product": 3, "Value": 4
+            }
+          }
+        }
+      ],
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+        "expr": "ALERTS{alertstate=\"firing\"}",
+        "legendFormat": "",
+        "refId": "A",
+        "instant": true,
+        "range": false,
+        "format": "table"
+      }]
+    },
+
+    {
+      "id": 15,
+      "uid": "mp-quick-actions",
+      "title": "Navigation & Runbooks",
+      "type": "text",
+      "gridPos": { "x": 15, "y": 46, "w": 9, "h": 9 },
+      "options": {
+        "mode": "markdown",
+        "content": "## Observability Dashboards\n\n- [L1 — Estate Health →](/d/watch-l1-estate)\n- [L2 — Pipeline Run Detail →](/d/watch-l2-pipeline)\n- [L2 — Streaming Health →](/d/watch-l2-streaming)\n- [L3 — Infrastructure →](/d/watch-l3-infra)\n\n## Investigate\n\n- [Prometheus Alerts →](http://localhost:9090/alerts)\n- [Alertmanager →](http://localhost:9093)\n\n## Runbooks\n\n- [Payments Settlement Batch Failure](#)\n- [Fraud Detection Latency Spike](#)\n- [AML Scan Delay — Weekly Batch](#)\n- [SLO Burn Rate Alert Response](#)\n- [Model Drift — Transaction Risk Scoring](#)"
+      }
+    }
+
+  ]
+}

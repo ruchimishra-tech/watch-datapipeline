@@ -128,6 +128,24 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Banking Marketplace Simulator ─────────────────────────────────────────
+  # Exposes realistic data_product_* Prometheus metrics for 13 banking products
+  # across 6 portfolios with time-driven scenarios (market hours, EOD, AML, etc.)
+  banking-simulator:
+    build:
+      context: ..
+      dockerfile: simulator/Dockerfile
+    container_name: watch_banking_simulator
+    command: ["python", "-m", "simulator.banking_marketplace_simulator"]
+    environment:
+      - BANKING_METRICS_PORT=8097
+      - WATCH_DEPLOYMENT_ENVIRONMENT=docker-dev
+    ports:
+      - "8097:8097"
+    networks:
+      - observability
+    restart: unless-stopped
+
   # ── Loki ───────────────────────────────────────────────────────────────────
   # Log aggregation — receives logs from pipelines and synthesizer
   loki:

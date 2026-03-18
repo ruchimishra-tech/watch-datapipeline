@@ -1,82 +1,590 @@
 {
+  "__watch_meta": {
+    "tier": "L3",
+    "mandatory_panels": ["svc-health", "collector-goroutines", "heap-memory", "scrape-health"],
+    "required_variables": ["environment"]
+  },
   "uid": "watch-l3-infra",
-  "title": "Watch L3 — Infrastructure",
-  "tags": ["watch", "infrastructure", "l3"],
+  "title": "L3 — Infrastructure Health",
+  "description": "L3 dashboard: full observability stack health. OTel Collector, Prometheus, Pipeline Simulator and Streaming Simulator. CPU, memory, goroutines, scrape latency and service uptime.",
+  "tags": ["watch", "l3", "infra", "infrastructure"],
   "schemaVersion": 38,
+  "version": 3,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
   "templating": {
     "list": [
       {
         "name": "environment",
-        "type": "query",
-        "datasource": {"uid": "prometheus-watch"},
-        "label": "Environment"
-      },
-      {
-        "name": "node",
-        "type": "query",
-        "datasource": {"uid": "prometheus-watch"},
-        "label": "Node"
-      },
-      {
-        "name": "spark_app_id",
-        "type": "query",
-        "datasource": {"uid": "prometheus-watch"},
-        "label": "Spark App"
+        "label": "Environment",
+        "type": "custom",
+        "options": [
+          { "text": "docker-dev", "value": "docker-dev", "selected": true },
+          { "text": "dev",        "value": "dev",        "selected": false },
+          { "text": "staging",    "value": "staging",    "selected": false },
+          { "text": "production", "value": "production", "selected": false }
+        ],
+        "current": { "text": "docker-dev", "value": "docker-dev" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
       }
     ]
   },
   "panels": [
+
+    {
+      "id": 50,
+      "uid": "l3-nav",
+      "title": "",
+      "type": "text",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 2 },
+      "options": {
+        "mode": "markdown",
+        "content": "### [← Estate Health (L1)](/d/watch-l1-estate) &nbsp;&nbsp;›&nbsp;&nbsp; **Infrastructure Health (L3)**\n\nFull observability stack metrics: OTel Collector, Prometheus, Pipeline Simulator and Streaming Simulator. All services, memory, goroutines and scrape health."
+      },
+      "transparent": true
+    },
+
+    {
+      "id": 200,
+      "type": "row",
+      "title": "SERVICE AVAILABILITY",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 2, "w": 24, "h": 1 }
+    },
+
     {
       "id": 1,
-      "type": "heatmap",
-      "title": "cpu-memory-heatmap",
-      "datasource": {"uid": "prometheus-watch"},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "uid": "svc-health",
+      "title": "OTel Collector",
+      "description": "Whether the OTel Collector is reachable by Prometheus. DOWN = no spans are being exported to Tempo.",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 3, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            { "type": "value", "options": { "1": { "color": "green", "text": "UP"   } } },
+            { "type": "value", "options": { "0": { "color": "red",   "text": "DOWN" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",   "value": null },
+            { "color": "green", "value": 1 }
+          ]}
+        }
+      },
       "targets": [
         {
-          "expr": "(1 - avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * 100",
-          "legendFormat": "CPU % {{instance}}"
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "up{job=\"collector\"}",
+          "legendFormat": "OTel Collector",
+          "refId": "A"
         }
       ]
     },
+
     {
       "id": 2,
-      "type": "table",
-      "title": "pod-health-table",
-      "datasource": {"uid": "prometheus-watch"},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "uid": "svc-pipeline-sim-l3",
+      "title": "Pipeline Simulator",
+      "description": "Whether the Pipeline Simulator metrics endpoint is reachable. DOWN = no pipeline metrics or spans.",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 3, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            { "type": "value", "options": { "1": { "color": "green", "text": "UP"   } } },
+            { "type": "value", "options": { "0": { "color": "red",   "text": "DOWN" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",   "value": null },
+            { "color": "green", "value": 1 }
+          ]}
+        }
+      },
       "targets": [
         {
-          "expr": "kube_pod_status_phase{phase!=\"Running\"}",
-          "legendFormat": "{{namespace}}/{{pod}}"
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "up{job=\"pipeline-simulator\"}",
+          "legendFormat": "Pipeline Simulator",
+          "refId": "A"
         }
       ]
     },
+
     {
       "id": 3,
-      "type": "timeseries",
-      "title": "spark-executor-utilisation",
-      "datasource": {"uid": "prometheus-watch"},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "uid": "svc-streaming-sim-l3",
+      "title": "Streaming Simulator",
+      "description": "Whether the Streaming Simulator metrics endpoint is reachable.",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 3, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            { "type": "value", "options": { "1": { "color": "green", "text": "UP"   } } },
+            { "type": "value", "options": { "0": { "color": "red",   "text": "DOWN" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",   "value": null },
+            { "color": "green", "value": 1 }
+          ]}
+        }
+      },
       "targets": [
         {
-          "expr": "spark_executor_jvm_heap_used_bytes{spark_app_id=~\"$spark_app_id\"}",
-          "legendFormat": "Heap {{executor_id}}"
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "up{job=\"streaming-simulator\"}",
+          "legendFormat": "Streaming Simulator",
+          "refId": "A"
         }
       ]
     },
+
     {
       "id": 4,
-      "type": "timeseries",
-      "title": "pipeline-run-timeline",
-      "datasource": {"uid": "prometheus-watch"},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "uid": "svc-prometheus-l3",
+      "title": "Prometheus",
+      "description": "Prometheus self-scrape health.",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 3, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            { "type": "value", "options": { "1": { "color": "green", "text": "UP"   } } },
+            { "type": "value", "options": { "0": { "color": "red",   "text": "DOWN" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",   "value": null },
+            { "color": "green", "value": 1 }
+          ]}
+        }
+      },
       "targets": [
         {
-          "expr": "pipeline_run_duration_seconds{environment=~\"$environment\"}",
-          "legendFormat": "{{pipeline_id}}"
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "up{job=\"prometheus\"}",
+          "legendFormat": "Prometheus",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 201,
+      "type": "row",
+      "title": "OTel COLLECTOR",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 7, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 5,
+      "uid": "collector-goroutines",
+      "title": "Collector Goroutines",
+      "description": "Number of live goroutines in the OTel Collector process. Sustained growth indicates span processing backlog or memory leak.",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 100 },
+            { "color": "red",    "value": 300 }
+          ]}
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last", "max"] },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "go_goroutines{job=\"collector\"}",
+          "legendFormat": "goroutines",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 6,
+      "uid": "collector-heap",
+      "title": "Collector Heap Memory",
+      "description": "Heap memory allocated (in use) vs total heap reserved from OS. Large gap between alloc and sys may indicate GC pressure.",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 8, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 8 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "go_memstats_heap_alloc_bytes{job=\"collector\"}",
+          "legendFormat": "heap alloc",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "go_memstats_heap_sys_bytes{job=\"collector\"}",
+          "legendFormat": "heap sys (reserved)",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "go_memstats_heap_inuse_bytes{job=\"collector\"}",
+          "legendFormat": "heap in-use",
+          "refId": "C"
+        }
+      ]
+    },
+
+    {
+      "id": 7,
+      "uid": "collector-gc",
+      "title": "Collector GC Pause Duration",
+      "description": "P99 GC stop-the-world pause duration. High values (>10ms) can impact span processing latency.",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 8, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "go_gc_duration_seconds{job=\"collector\", quantile=\"0.5\"}",
+          "legendFormat": "GC p50",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "go_gc_duration_seconds{job=\"collector\", quantile=\"0.99\"}",
+          "legendFormat": "GC p99",
+          "refId": "B"
+        }
+      ]
+    },
+
+    {
+      "id": 202,
+      "type": "row",
+      "title": "PROMETHEUS",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 15, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 8,
+      "uid": "prometheus-memory",
+      "title": "Prometheus Resident Memory",
+      "description": "Prometheus process RSS memory. Grows with TSDB size and active query load.",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last"] },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "process_resident_memory_bytes{job=\"prometheus\"}",
+          "legendFormat": "RSS memory",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 9,
+      "uid": "scrape-health",
+      "title": "Scrape Duration by Target",
+      "description": "How long each scrape takes. Scrapes exceeding the scrape_interval cause missed collections.",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 16, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 2 },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 0.5 },
+            { "color": "red",    "value": 1.0 }
+          ]}
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "scrape_duration_seconds",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 10,
+      "uid": "scrape-samples",
+      "title": "Samples Scraped per Target",
+      "description": "Number of metric samples collected per scrape per job. Useful to detect metric explosion from label cardinality.",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 16, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "scrape_samples_scraped",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 203,
+      "type": "row",
+      "title": "PIPELINE & STREAMING SIMULATORS",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 11,
+      "uid": "pipeline-throughput",
+      "title": "Pipeline Run Rate (runs/min)",
+      "description": "Rate of pipeline run completions across all pipelines. Drops indicate scenarios have stopped running.",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 24, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 8 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "sum by (pipeline_id) (rate(simulator_pipeline_runs_total{environment=\"$environment\"}[5m])) * 60",
+          "legendFormat": "{{pipeline_id}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 12,
+      "uid": "kafka-consumer-lag-l3",
+      "title": "Kafka Consumer Lag",
+      "description": "Consumer lag per topic/consumer group from the streaming simulator.",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 24, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 8 },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 10000 },
+            { "color": "red",    "value": 100000 }
+          ]}
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "kafka_consumer_lag_sum",
+          "legendFormat": "{{consumer_group}} / {{topic}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 13,
+      "uid": "open-fds",
+      "title": "Open File Descriptors",
+      "description": "Open vs maximum file descriptors per service. A steady increase could indicate FD leaks.",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 24, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "process_open_fds{job=~\"pipeline-simulator|streaming-simulator|prometheus\"}",
+          "legendFormat": "{{job}} open",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "expr": "process_max_fds{job=~\"pipeline-simulator|streaming-simulator|prometheus\"}",
+          "legendFormat": "{{job}} max",
+          "refId": "B"
+        }
+      ]
+    },
+
+    {
+      "id": 204,
+      "type": "row",
+      "title": "TSDB & ALERTING",
+      "collapsed": true,
+      "gridPos": { "x": 0, "y": 31, "w": 24, "h": 1 },
+      "panels": [
+        {
+          "id": 14,
+          "uid": "tsdb-series",
+          "title": "TSDB Active Series",
+          "description": "Number of active time series in Prometheus TSDB. High cardinality degrades query performance.",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 32, "w": 8, "h": 7 },
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+              "expr": "prometheus_tsdb_head_series",
+              "legendFormat": "head series",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "uid": "alert-notifications",
+          "title": "Alert Notifications Rate",
+          "description": "Alerts sent to Alertmanager per second. Spikes correspond to rule firings.",
+          "type": "timeseries",
+          "gridPos": { "x": 8, "y": 32, "w": 8, "h": 7 },
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+              "expr": "rate(prometheus_notifications_sent_total[5m])",
+              "legendFormat": "alerts/s",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 16,
+          "uid": "rule-eval-duration",
+          "title": "Alert Rule Evaluation Duration",
+          "description": "Time taken to evaluate all alerting rules. Should stay well under the evaluation_interval.",
+          "type": "timeseries",
+          "gridPos": { "x": 16, "y": 32, "w": 8, "h": 7 },
+          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+          "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2 } } },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+              "expr": "prometheus_rule_group_last_duration_seconds",
+              "legendFormat": "{{rule_group}}",
+              "refId": "A"
+            }
+          ]
         }
       ]
     }
+
   ]
 }

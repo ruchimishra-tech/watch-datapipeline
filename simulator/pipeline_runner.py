@@ -93,14 +93,42 @@ def execute_scenario(scenario: ScenarioConfig) -> RunResult:
                 duration = _simulate_duration(phase_cfg)
                 row_count = _simulate_row_count(phase_cfg)
 
-                # Simulate the phase work
-                with pipeline.phase(
-                    phase_cfg.name,
-                    source_system="simulator",
-                    row_count=row_count,
-                ) as phase:
+                # Build phase kwargs with source/target metadata from scenario config
+                phase_kwargs: dict = {}
+                if phase_cfg.source_system:
+                    phase_kwargs["source_system"] = phase_cfg.source_system
+                if phase_cfg.target_system and phase_cfg.target_system != "unknown":
+                    phase_kwargs["target_system"] = phase_cfg.target_system
+
+                with pipeline.phase(phase_cfg.name, **phase_kwargs) as phase:
                     phase.set_attribute("simulator.duration_planned_s", round(duration, 2))
                     phase.set_attribute("simulator.row_count", row_count)
+
+                    # Source details
+                    if phase_cfg.source_table:
+                        phase.set_attribute(f"{phase_cfg.name}.source.table", phase_cfg.source_table)
+                    if phase_cfg.source_format:
+                        phase.set_attribute(f"{phase_cfg.name}.source.format", phase_cfg.source_format)
+                    if phase_cfg.source_filter:
+                        phase.set_attribute(f"{phase_cfg.name}.source.filter", phase_cfg.source_filter)
+
+                    # Target details
+                    if phase_cfg.target_table:
+                        phase.set_attribute(f"{phase_cfg.name}.target.table", phase_cfg.target_table)
+                    if phase_cfg.target_partition:
+                        phase.set_attribute(f"{phase_cfg.name}.target.partition", phase_cfg.target_partition)
+                    if phase_cfg.target_write_mode:
+                        phase.set_attribute(f"{phase_cfg.name}.target.write_mode", phase_cfg.target_write_mode)
+
+                    # Transform operations — joined as a readable string
+                    if phase_cfg.transform_operations:
+                        phase.set_attribute("transform.operations",
+                                            " | ".join(phase_cfg.transform_operations))
+                        phase.set_attribute("transform.operation_count",
+                                            len(phase_cfg.transform_operations))
+
+                    # Row count on the span
+                    phase.set_attribute(f"{phase_cfg.name}.row_count", row_count)
 
                     # Simulate actual work time
                     time.sleep(duration)
