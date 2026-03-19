@@ -1,17 +1,42 @@
 {
   "__watch_meta": {
     "tier": "L2",
-    "mandatory_panels": ["runs-table", "trace-view", "phase-detail-table"],
-    "required_variables": ["environment", "pipeline_id", "trace_id"]
+    "mandatory_panels": [
+      "runs-table",
+      "trace-waterfall",
+      "phase-detail-table",
+      "root-cause"
+    ],
+    "required_variables": [
+      "environment",
+      "pipeline_id",
+      "trace_id"
+    ],
+    "context_variables": [
+      "portfolio",
+      "product",
+      "domain",
+      "owner"
+    ]
   },
   "uid": "watch-l2-pipeline",
-  "title": "L2 — Pipeline Run Detail",
-  "description": "L2 dashboard: select a pipeline to see all its runs, then click any run to view the full trace waterfall with phase details and DQ events. Navigate here by clicking Pipeline Name in L1.",
-  "tags": ["watch", "l2", "pipeline"],
+  "title": "L2 \u2014 Pipeline Observability & Debug",
+  "description": "L2 deep-debug dashboard. Select a pipeline to view all runs. Click a Trace ID to load the full span waterfall, phase breakdown, root cause analysis, DQ events, SLO correlation, and streaming metrics. Navigate from L1 via product drill-down links.",
+  "tags": [
+    "watch",
+    "l2",
+    "pipeline",
+    "tracing",
+    "debug",
+    "slo"
+  ],
   "schemaVersion": 38,
-  "version": 7,
+  "version": 11,
   "refresh": "30s",
-  "time": { "from": "now-24h", "to": "now" },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
   "timepicker": {},
   "templating": {
     "list": [
@@ -20,264 +45,780 @@
         "label": "Environment",
         "type": "custom",
         "options": [
-          { "text": "docker-dev", "value": "docker-dev", "selected": true },
-          { "text": "dev",        "value": "dev",        "selected": false },
-          { "text": "staging",    "value": "staging",    "selected": false },
-          { "text": "production", "value": "production", "selected": false }
+          {
+            "text": "docker-dev",
+            "value": "docker-dev",
+            "selected": true
+          },
+          {
+            "text": "dev",
+            "value": "dev"
+          },
+          {
+            "text": "test",
+            "value": "test"
+          },
+          {
+            "text": "prod",
+            "value": "prod"
+          }
         ],
-        "current": { "text": "docker-dev", "value": "docker-dev" },
+        "current": {
+          "text": "docker-dev",
+          "value": "docker-dev"
+        },
         "hide": 0,
         "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "portfolio",
+        "label": "Portfolio",
+        "type": "textbox",
+        "current": {
+          "text": "All",
+          "value": "All"
+        },
+        "hide": 0,
+        "description": "Data product portfolio \u2014 passed from L1 for context. Not used to filter pipeline metrics."
+      },
+      {
+        "name": "product",
+        "label": "Data Product",
+        "type": "textbox",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        },
+        "hide": 0,
+        "description": "Data product name \u2014 passed from L1. Used to correlate SLO/SLI metrics in the lower section."
+      },
+      {
+        "name": "domain",
+        "label": "Domain",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-dev"
+        },
+        "definition": "label_values(simulator_pipeline_info{environment=\"$environment\"}, domain)",
+        "query": "label_values(simulator_pipeline_info{environment=\"$environment\"}, domain)",
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
         "multi": false
       },
       {
         "name": "pipeline_id",
         "label": "Pipeline",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-        "definition": "label_values(simulator_pipeline_info{environment=\"$environment\"}, pipeline_id)",
-        "query": "label_values(simulator_pipeline_info{environment=\"$environment\"}, pipeline_id)",
-        "refresh": 1,
-        "hide": 0,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-dev"
+        },
+        "definition": "label_values(simulator_pipeline_info{environment=\"$environment\",domain=~\"$domain\"}, pipeline_id)",
+        "query": "label_values(simulator_pipeline_info{environment=\"$environment\",domain=~\"$domain\"}, pipeline_id)",
+        "refresh": 2,
+        "sort": 1,
         "includeAll": true,
         "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
         "multi": false,
-        "current": { "text": "All", "value": "$__all" },
-        "description": "Select a pipeline to see its runs. Pre-populated when navigating from L1."
+        "description": "Select a pipeline to see its runs. Pre-populated when navigating from L1 via ?var-pipeline_id=..."
+      },
+      {
+        "name": "owner",
+        "label": "Owner",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-dev"
+        },
+        "definition": "label_values(simulator_pipeline_info{environment=\"$environment\",pipeline_id=~\"$pipeline_id\"}, owner)",
+        "query": "label_values(simulator_pipeline_info{environment=\"$environment\",pipeline_id=~\"$pipeline_id\"}, owner)",
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "multi": false
       },
       {
         "name": "trace_id",
-        "label": "Run (Trace ID)",
+        "label": "Trace ID (Run)",
         "type": "textbox",
-        "current": { "text": "", "value": "" },
+        "current": {
+          "text": "",
+          "value": ""
+        },
         "hide": 0,
-        "description": "Auto-populated when you click a run in the table below. You can also paste a trace ID directly."
+        "description": "Auto-populated when you click a run row in the table. You can also paste a Trace ID directly."
       }
     ]
   },
   "panels": [
-
     {
       "id": 50,
       "uid": "l2-nav",
       "title": "",
       "type": "text",
-      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 2 },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 2
+      },
       "options": {
         "mode": "markdown",
-        "content": "### [← Estate Health (L1)](/d/watch-l1-estate) &nbsp;&nbsp;›&nbsp;&nbsp; **Pipeline Runs (L2)** &nbsp;&nbsp;›&nbsp;&nbsp; Trace Detail &nbsp;&nbsp;|&nbsp;&nbsp; [Infrastructure (L3) →](/d/watch-l3-infra)\n\n**How to use:** Select a **Pipeline** from the dropdown → the runs table below filters to that pipeline. Click any **Trace ID** in the table → the trace waterfall and phase detail panels fill in below."
+        "content": "### [&#8592; Data Marketplace](/d/marketplace-home?var-environment=${environment}) &nbsp;&#8250;&nbsp; [L1 Estate Health](/d/watch-l1-estate?var-environment=${environment}&var-portfolio=${portfolio}&var-product=${product}) &nbsp;&#8250;&nbsp; **L2 Pipeline Debug** &nbsp;|&nbsp; [L3 Infrastructure &#8594;](/d/watch-l3-infra?var-environment=${environment})\n\n**Context:** Portfolio `${portfolio}` &nbsp;&#183;&nbsp; Product `${product}` &nbsp;&#183;&nbsp; Domain `${domain}` &nbsp;&#183;&nbsp; Pipeline `${pipeline_id}` &nbsp;&#183;&nbsp; Owner `${owner}` &nbsp;&#183;&nbsp; Env `${environment}`\n\n**How to use:** Select a **Pipeline** &#8594; click any **Trace ID** in the runs table &#8594; trace waterfall, phase breakdown, root cause, and DQ events all populate automatically."
       },
       "transparent": true
     },
-
     {
       "id": 200,
       "type": "row",
-      "title": "PIPELINE HEALTH — $pipeline_id",
+      "title": "PIPELINE HEALTH SUMMARY \u2014 ${pipeline_id}",
       "collapsed": false,
-      "gridPos": { "x": 0, "y": 2, "w": 24, "h": 1 }
+      "gridPos": {
+        "x": 0,
+        "y": 2,
+        "w": 24,
+        "h": 1
+      }
     },
-
     {
       "id": 20,
-      "uid": "l2-success-rate",
-      "title": "Success Rate (24h)",
-      "description": "24h success rate for the selected pipeline.",
       "type": "stat",
-      "gridPos": { "x": 0, "y": 3, "w": 5, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "title": "Success Rate (24h)",
+      "description": "24h success rate for selected pipeline(s).",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "background",
         "graphMode": "area",
-        "textMode": "auto"
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
       },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "decimals": 1,
-          "thresholds": { "mode": "absolute", "steps": [
-            { "color": "red",    "value": null },
-            { "color": "yellow", "value": 0.75 },
-            { "color": "green",  "value": 0.95 }
-          ]}
-        }
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.75
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1
+        },
+        "overrides": []
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"success\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h])) / sum(rate(simulator_pipeline_runs_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h]))",
-          "legendFormat": "Success Rate",
-          "refId": "A"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"success\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h])) / sum(rate(simulator_pipeline_runs_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h]))"
         }
       ]
     },
-
     {
       "id": 21,
-      "uid": "l2-total-runs",
-      "title": "Total Runs (24h)",
-      "description": "Total runs completed for the selected pipeline in the last 24 hours.",
       "type": "stat",
-      "gridPos": { "x": 5, "y": 3, "w": 5, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "title": "Total Runs (24h)",
+      "description": "Total pipeline runs in the last 24 hours.",
+      "gridPos": {
+        "x": 4,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "value",
-        "graphMode": "area"
+        "graphMode": "area",
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
       },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }]}
-        }
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "sum(increase(simulator_pipeline_runs_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h]))",
-          "legendFormat": "Runs",
-          "refId": "A"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "sum(increase(simulator_pipeline_runs_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h]))"
         }
       ]
     },
-
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "Failures (24h)",
+      "description": "Failed runs in the last 24 hours.",
+      "gridPos": {
+        "x": 8,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "sum(increase(simulator_pipeline_runs_total{status=\"failed\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h])) or vector(0)"
+        }
+      ]
+    },
     {
       "id": 22,
-      "uid": "l2-last-duration",
-      "title": "Last Run Duration",
-      "description": "Duration of the most recently completed run.",
       "type": "stat",
-      "gridPos": { "x": 10, "y": 3, "w": 5, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "title": "Last Run Duration",
+      "description": "Duration of the most recent completed run.",
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
       },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "decimals": 1,
-          "thresholds": { "mode": "absolute", "steps": [
-            { "color": "green",  "value": null },
-            { "color": "yellow", "value": 60 },
-            { "color": "red",    "value": 120 }
-          ]}
-        }
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 120
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1
+        },
+        "overrides": []
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "max(simulator_pipeline_last_duration_seconds{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"})",
-          "legendFormat": "Duration",
-          "refId": "A"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "max(simulator_pipeline_last_duration_seconds{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}) "
         }
       ]
     },
-
     {
       "id": 23,
-      "uid": "l2-sla-breaches",
-      "title": "SLA Breaches (24h)",
-      "description": "Number of runs that exceeded the declared SLA.",
       "type": "stat",
-      "gridPos": { "x": 15, "y": 3, "w": 4, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "title": "SLA Breaches (24h)",
+      "description": "Runs that breached SLA (approximated by failure count).",
+      "gridPos": {
+        "x": 16,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "background",
-        "graphMode": "none"
+        "graphMode": "none",
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
       },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "thresholds": { "mode": "absolute", "steps": [
-            { "color": "green",  "value": null },
-            { "color": "yellow", "value": 1 },
-            { "color": "red",    "value": 5 }
-          ]}
-        }
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "sum(increase(simulator_sla_breaches_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h]))",
-          "legendFormat": "SLA Breaches",
-          "refId": "A"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "sum(increase(simulator_pipeline_runs_total{status=\"failed\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h])) or vector(0)"
         }
       ]
     },
-
     {
       "id": 24,
-      "uid": "l2-dq-violations",
-      "title": "DQ Violations (24h)",
-      "description": "Data quality violations detected in the last 24 hours.",
       "type": "stat",
-      "gridPos": { "x": 19, "y": 3, "w": 5, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
+      "title": "Failure Rate Trend",
+      "description": "6h rolling failure rate. Rising trend = degrading pipeline reliability.",
+      "gridPos": {
+        "x": 20,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "background",
-        "graphMode": "none"
+        "graphMode": "none",
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "thresholds": { "mode": "absolute", "steps": [
-            { "color": "green",  "value": null },
-            { "color": "yellow", "value": 1 },
-            { "color": "red",    "value": 3 }
-          ]}
-        }
+          "unit": "percentunit",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.05
+              },
+              {
+                "color": "red",
+                "value": 0.2
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2
+        },
+        "overrides": []
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus-dev" },
-          "expr": "sum(increase(simulator_dq_violations_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h]))",
-          "legendFormat": "DQ Violations",
-          "refId": "A"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"failed\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[6h])) / sum(rate(simulator_pipeline_runs_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[6h]))"
         }
       ]
     },
-
     {
       "id": 201,
       "type": "row",
-      "title": "ALL RUNS FOR '$pipeline_id' — Click any Trace ID to view its full trace below",
+      "title": "PERFORMANCE TRENDS \u2014 24h",
       "collapsed": false,
-      "gridPos": { "x": 0, "y": 7, "w": 24, "h": 1 }
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 24,
+        "h": 1
+      }
     },
-
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Run Success / Failure Rate \u2014 30m window",
+      "description": "Run throughput rate. Failures spike on intermittent or systematic issues.",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "min"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"success\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[30m])) * 60",
+          "legendFormat": "Success / min"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "B",
+          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"failed\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[30m])) * 60",
+          "legendFormat": "Failure / min"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Pipeline Duration \u2014 Last Observed",
+      "description": "Last observed run duration per pipeline. Sustained growth = performance regression or data volume increase.",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "min"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 120
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "expr": "simulator_pipeline_last_duration_seconds{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}",
+          "legendFormat": "{{pipeline_id}} \u2014 {{pipeline_name}}"
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "type": "row",
+      "title": "PIPELINE RUNS \u2014 Click any Trace ID to drill into that run",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 1
+      }
+    },
     {
       "id": 1,
       "uid": "runs-table",
-      "title": "Pipeline Runs — click a Trace ID to load the trace detail below",
-      "description": "All runs for the selected pipeline. Click a Trace ID → the span waterfall, phase table and DQ events panels below will populate with that run's data. No copy-paste needed.",
+      "title": "Pipeline Runs \u2014 Click Trace ID to load trace detail",
+      "description": "All runs for the selected pipeline(s), queried live from Tempo. Click a **Trace ID** to populate the waterfall, phase breakdown, root cause, and DQ panels below. Failed runs shown in red.",
       "type": "table",
-      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 12 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 11
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo-dev"
+      },
       "options": {
-        "footer": { "show": false },
-        "sortBy": [{ "displayName": "Started", "desc": true }],
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Started",
+            "desc": true
+          }
+        ],
         "cellHeight": "sm"
       },
       "fieldConfig": {
-        "defaults": { "custom": { "align": "auto", "filterable": true } },
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          },
+          "noValue": "\u2014"
+        },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "traceIdHidden" },
+            "matcher": {
+              "id": "byName",
+              "options": "traceIdHidden"
+            },
             "properties": [
-              { "id": "custom.hidden",  "value": false },
-              { "id": "displayName",    "value": "Trace ID" },
-              { "id": "custom.width",   "value": 250 },
+              {
+                "id": "custom.hidden",
+                "value": false
+              },
+              {
+                "id": "displayName",
+                "value": "Trace ID"
+              },
+              {
+                "id": "custom.width",
+                "value": 240
+              },
               {
                 "id": "links",
                 "value": [
                   {
-                    "title": "Load this run →",
-                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-pipeline_id=${pipeline_id}&var-trace_id=${__value.raw}",
+                    "title": "Load this run \u2192",
+                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-pipeline_id=${pipeline_id}&var-domain=${domain}&var-product=${product}&var-portfolio=${portfolio}&var-trace_id=${__value.raw}",
                     "targetBlank": false
                   }
                 ]
@@ -285,43 +826,119 @@
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "pipeline.name" },
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline.name"
+            },
             "properties": [
-              { "id": "displayName", "value": "Pipeline" },
-              { "id": "custom.width", "value": 210 }
+              {
+                "id": "displayName",
+                "value": "Pipeline"
+              },
+              {
+                "id": "custom.width",
+                "value": 200
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "pipeline.status" },
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline.status"
+            },
             "properties": [
-              { "id": "displayName", "value": "Status" },
-              { "id": "custom.width", "value": 100 },
-              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } },
-              { "id": "mappings", "value": [
-                {
-                  "type": "value",
-                  "options": {
-                    "success": { "color": "green", "text": "✓ success", "index": 0 },
-                    "failed":  { "color": "red",   "text": "✗ failed",  "index": 1 },
-                    "running": { "color": "blue",  "text": "⟳ running", "index": 2 }
-                  }
+              {
+                "id": "displayName",
+                "value": "Status"
+              },
+              {
+                "id": "custom.width",
+                "value": 105
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
                 }
-              ]}
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "success": {
+                        "color": "green",
+                        "text": "\u2713 success",
+                        "index": 0
+                      },
+                      "failed": {
+                        "color": "red",
+                        "text": "\u2717 failed",
+                        "index": 1
+                      },
+                      "running": {
+                        "color": "blue",
+                        "text": "\u27f3 running",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "duration" },
+            "matcher": {
+              "id": "byName",
+              "options": "duration"
+            },
             "properties": [
-              { "id": "unit",         "value": "ns" },
-              { "id": "displayName",  "value": "Duration" },
-              { "id": "custom.width", "value": 110 }
+              {
+                "id": "unit",
+                "value": "ns"
+              },
+              {
+                "id": "displayName",
+                "value": "Duration"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "time" },
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline.type"
+            },
             "properties": [
-              { "id": "displayName",  "value": "Started" },
-              { "id": "custom.width", "value": 180 }
+              {
+                "id": "displayName",
+                "value": "Type"
+              },
+              {
+                "id": "custom.width",
+                "value": 85
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Started"
+              },
+              {
+                "id": "custom.width",
+                "value": 180
+              }
             ]
           }
         ]
@@ -331,119 +948,241 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "spanID":         true,
-              "traceService":   true,
-              "traceName":      true,
-              "name":           true,
-              "pipeline.id":    true,
-              "pipeline.type":  true,
+              "spanID": true,
+              "traceService": true,
+              "traceName": true,
+              "name": true,
+              "pipeline.id": true,
               "pipeline.run_id": true,
-              "deployment.environment": true
+              "deployment.environment": true,
+              "pipeline.duration_ms": true,
+              "pipeline.failure_phase": true,
+              "pipeline.failure_reason": true
             },
-            "renameByName": {},
             "indexByName": {
               "traceIdHidden": 0,
-              "pipeline.name":   1,
+              "pipeline.name": 1,
               "pipeline.status": 2,
-              "duration":        3,
-              "time":            4
-            }
+              "pipeline.type": 3,
+              "duration": 4,
+              "time": 5
+            },
+            "renameByName": {}
           }
         }
       ],
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo-dev" },
-          "queryType": "traceql",
-          "query": "{span.pipeline.id=~\"$pipeline_id\" && span.deployment.environment=\"$environment\" && name=\"pipeline.run\"} | select(span.pipeline.name, span.pipeline.id, span.pipeline.status)",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo-dev"
+          },
           "refId": "A",
+          "queryType": "traceql",
+          "query": "{span.pipeline.id=~\"$pipeline_id\" && span.deployment.environment=\"$environment\" && name=\"pipeline.run\"} | select(span.pipeline.name, span.pipeline.id, span.pipeline.status, span.pipeline.type, span.pipeline.failure_phase)",
           "tableType": "spans",
           "limit": 100
         }
       ]
     },
-
     {
-      "id": 202,
+      "id": 203,
       "type": "row",
-      "title": "TRACE DETAIL — $trace_id  (selected above)",
+      "title": "TRACE DETAIL \u2014 ${trace_id}",
       "collapsed": false,
-      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 1 }
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 1
+      }
     },
-
     {
       "id": 51,
       "uid": "trace-hint",
       "title": "",
       "type": "text",
-      "gridPos": { "x": 0, "y": 21, "w": 24, "h": 2 },
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 2
+      },
       "options": {
         "mode": "markdown",
-        "content": "> **Selected run:** `$trace_id`  \n> Click a **Trace ID** in the table above to populate the waterfall, phase detail and DQ events panels below."
+        "content": "> **Selected run:** `${trace_id}`  \u2003Click a **Trace ID** in the table above to load the waterfall, phase breakdown, root cause, and DQ events. Panels show \u201cNo data\u201d until a trace is selected."
       },
       "transparent": true
     },
-
     {
       "id": 2,
-      "uid": "trace-view",
-      "title": "Span Waterfall — Extract → Transform → Load",
-      "description": "Full trace waterfall for the selected run. Click any span bar to see its attributes: source/target systems, row counts, transform operations, DQ events and failure reason.",
+      "uid": "trace-waterfall",
+      "title": "Span Waterfall \u2014 Extract \u2192 Transform \u2192 Load",
+      "description": "Full trace waterfall for the selected run. Each span shows stage name, duration, and status. Red spans = failed stage. Click any span bar to see all attributes: row counts, transform operations, source/target systems, error message.",
       "type": "traces",
-      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 16 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
-      "options": { "createSpanLink": {} },
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo-dev"
+      },
+      "options": {
+        "createSpanLink": {}
+      },
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo-dev"
+          },
+          "refId": "A",
           "queryType": "traceId",
-          "query": "$trace_id",
-          "refId": "A"
+          "query": "$trace_id"
         }
       ]
     },
-
     {
       "id": 3,
       "uid": "phase-detail-table",
-      "title": "Phase Spans Detail",
-      "description": "One row per ETL phase (extract, transform, load). Duration in ms. Status 1=OK, 2=ERROR. Click a row's span in the waterfall above for full attribute detail.",
+      "title": "Phase Spans \u2014 Duration & Status",
+      "description": "One row per ETL phase (extract, transform, load). Duration in ms. ERROR status = this phase caused the failure. Check pipeline.failure_reason on the failed span.",
       "type": "table",
-      "gridPos": { "x": 0, "y": 39, "w": 24, "h": 8 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
+      "gridPos": {
+        "x": 0,
+        "y": 45,
+        "w": 14,
+        "h": 8
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo-dev"
+      },
       "options": {
-        "footer": { "show": false },
-        "sortBy": [{ "displayName": "startTime", "desc": false }]
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Start Time",
+            "desc": false
+          }
+        ]
       },
       "fieldConfig": {
-        "defaults": { "custom": { "align": "left" } },
+        "defaults": {
+          "custom": {
+            "align": "left"
+          },
+          "noValue": "\u2014"
+        },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "statusCode" },
+            "matcher": {
+              "id": "byName",
+              "options": "statusCode"
+            },
             "properties": [
-              { "id": "custom.displayMode", "value": "color-background" },
-              { "id": "mappings", "value": [
-                { "type": "value", "options": { "1": { "color": "green", "text": "OK"    } } },
-                { "type": "value", "options": { "2": { "color": "red",   "text": "ERROR" } } }
-              ]}
+              {
+                "id": "displayName",
+                "value": "Status"
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "color": "green",
+                        "text": "OK",
+                        "index": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "2": {
+                        "color": "red",
+                        "text": "ERROR",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "duration" },
+            "matcher": {
+              "id": "byName",
+              "options": "duration"
+            },
             "properties": [
-              { "id": "unit",        "value": "ms" },
-              { "id": "displayName", "value": "Duration" }
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "displayName",
+                "value": "Duration"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "operationName" },
-            "properties": [{ "id": "displayName", "value": "Phase" }]
+            "matcher": {
+              "id": "byName",
+              "options": "operationName"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Phase"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
           },
           {
-            "matcher": { "id": "byName", "options": "startTime" },
+            "matcher": {
+              "id": "byName",
+              "options": "startTime"
+            },
             "properties": [
-              { "id": "unit",        "value": "dateTimeAsIso" },
-              { "id": "displayName", "value": "Start Time" }
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "displayName",
+                "value": "Start Time"
+              },
+              {
+                "id": "custom.width",
+                "value": 185
+              }
             ]
           }
         ]
@@ -452,7 +1191,17 @@
         {
           "id": "filterByValue",
           "options": {
-            "filters": [{ "fieldName": "operationName", "config": { "id": "regex", "options": { "value": "^etl\\." } } }],
+            "filters": [
+              {
+                "fieldName": "operationName",
+                "config": {
+                  "id": "regex",
+                  "options": {
+                    "value": "^etl\\."
+                  }
+                }
+              }
+            ],
             "type": "include"
           }
         },
@@ -460,57 +1209,135 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "traceID": true, "spanID": true, "parentSpanID": true,
-              "kind": true, "statusMessage": true,
-              "instrumentationLibraryName": true, "instrumentationLibraryVersion": true,
-              "traceState": true, "serviceTags": true, "logs": true,
-              "references": true, "serviceName": true, "tags": true
-            },
-            "renameByName": {
-              "operationName": "Phase",
-              "duration": "Duration (ms)",
-              "statusCode": "Status",
-              "startTime": "Start Time"
+              "traceID": true,
+              "spanID": true,
+              "parentSpanID": true,
+              "kind": true,
+              "statusMessage": true,
+              "instrumentationLibraryName": true,
+              "instrumentationLibraryVersion": true,
+              "traceState": true,
+              "serviceTags": true,
+              "logs": true,
+              "references": true,
+              "serviceName": true,
+              "tags": true
             },
             "indexByName": {
               "operationName": 0,
               "statusCode": 1,
               "duration": 2,
               "startTime": 3
-            }
+            },
+            "renameByName": {}
           }
         }
       ],
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo-dev"
+          },
+          "refId": "A",
           "queryType": "traceId",
-          "query": "$trace_id",
-          "refId": "A"
+          "query": "$trace_id"
         }
       ]
     },
-
     {
-      "id": 4,
-      "uid": "dq-events-table",
-      "title": "Data Quality Events",
-      "description": "DQ check events emitted on the etl.extract span. Each check shows the rule, column, severity and null rate. warning = above 3% threshold.",
+      "id": 30,
+      "uid": "root-cause",
+      "title": "Root Cause Summary",
+      "description": "Shows spans with ERROR status for the selected trace. pipeline.failure_reason gives the exact error. pipeline.failure_phase identifies the stage. If empty, all spans completed successfully.",
       "type": "table",
-      "gridPos": { "x": 0, "y": 47, "w": 24, "h": 7 },
-      "datasource": { "type": "tempo", "uid": "tempo-dev" },
-      "options": { "footer": { "show": false } },
+      "gridPos": {
+        "x": 14,
+        "y": 45,
+        "w": 10,
+        "h": 8
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo-dev"
+      },
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm"
+      },
       "fieldConfig": {
-        "defaults": { "custom": { "align": "left" } },
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "wrap": true
+          },
+          "noValue": "\u2014"
+        },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "statusCode" },
+            "matcher": {
+              "id": "byName",
+              "options": "statusCode"
+            },
             "properties": [
-              { "id": "custom.displayMode", "value": "color-background" },
-              { "id": "mappings", "value": [
-                { "type": "value", "options": { "1": { "color": "green", "text": "OK"    } } },
-                { "type": "value", "options": { "2": { "color": "red",   "text": "ERROR" } } }
-              ]}
+              {
+                "id": "displayName",
+                "value": "Status"
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "color": "green",
+                        "text": "OK",
+                        "index": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "2": {
+                        "color": "red",
+                        "text": "ERROR",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "operationName"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Span"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
             ]
           }
         ]
@@ -519,7 +1346,17 @@
         {
           "id": "filterByValue",
           "options": {
-            "filters": [{ "fieldName": "operationName", "config": { "id": "equal", "options": { "value": "etl.extract" } } }],
+            "filters": [
+              {
+                "fieldName": "statusCode",
+                "config": {
+                  "id": "equal",
+                  "options": {
+                    "value": 2
+                  }
+                }
+              }
+            ],
             "type": "include"
           }
         },
@@ -527,30 +1364,833 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "traceID": true, "spanID": true, "parentSpanID": true,
-              "kind": true, "statusMessage": true,
-              "instrumentationLibraryName": true, "instrumentationLibraryVersion": true,
-              "traceState": true, "serviceTags": true, "references": true,
-              "serviceName": true, "tags": true, "startTime": true
+              "traceID": true,
+              "spanID": true,
+              "parentSpanID": true,
+              "kind": true,
+              "statusMessage": true,
+              "instrumentationLibraryName": true,
+              "instrumentationLibraryVersion": true,
+              "traceState": true,
+              "serviceTags": true,
+              "logs": true,
+              "references": true,
+              "serviceName": true,
+              "tags": true,
+              "startTime": true,
+              "duration": true
+            },
+            "indexByName": {
+              "operationName": 0,
+              "statusCode": 1
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo-dev"
+          },
+          "refId": "A",
+          "queryType": "traceId",
+          "query": "$trace_id"
+        }
+      ]
+    },
+    {
+      "id": 204,
+      "type": "row",
+      "title": "DATA QUALITY EVENTS \u2014 For Selected Run",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 4,
+      "uid": "dq-events-table",
+      "title": "DQ Events \u2014 Extract Phase",
+      "description": "DQ check events emitted on the etl.extract span. Shows rule name, severity, and affected records. Empty = no DQ events recorded for this run.",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 54,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo-dev"
+      },
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          },
+          "noValue": "\u2014"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "statusCode"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "DQ Status"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "color": "green",
+                        "text": "PASS",
+                        "index": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "2": {
+                        "color": "red",
+                        "text": "FAIL",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "operationName"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Phase"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "displayName",
+                "value": "Duration"
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "fieldName": "operationName",
+                "config": {
+                  "id": "equal",
+                  "options": {
+                    "value": "etl.extract"
+                  }
+                }
+              }
+            ],
+            "type": "include"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "traceID": true,
+              "spanID": true,
+              "parentSpanID": true,
+              "kind": true,
+              "statusMessage": true,
+              "instrumentationLibraryName": true,
+              "instrumentationLibraryVersion": true,
+              "traceState": true,
+              "serviceTags": true,
+              "references": true,
+              "serviceName": true,
+              "tags": true,
+              "startTime": true
             },
             "renameByName": {
               "operationName": "Phase",
-              "statusCode": "Phase Status",
+              "statusCode": "DQ Status",
               "duration": "Duration (ms)",
-              "logs": "DQ Events (raw)"
+              "logs": "DQ Events"
             }
           }
         }
       ],
       "targets": [
         {
-          "datasource": { "type": "tempo", "uid": "tempo-dev" },
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo-dev"
+          },
+          "refId": "A",
           "queryType": "traceId",
-          "query": "$trace_id",
-          "refId": "A"
+          "query": "$trace_id"
         }
       ]
+    },
+    {
+      "id": 205,
+      "type": "row",
+      "title": "SLO / SLI CORRELATION \u2014 Data Product: ${product}",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 61,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 40,
+      "type": "stat",
+      "title": "SLO Compliance",
+      "description": "Rolling SLO compliance for the associated data product. Breach = pipeline is contributing to SLO miss.",
+      "gridPos": {
+        "x": 0,
+        "y": 62,
+        "w": 5,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.99
+              },
+              {
+                "color": "green",
+                "value": 0.999
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "data_product_slo_compliance_ratio{environment=\"$environment\", product=~\"$product\"}"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "type": "stat",
+      "title": "Health Score",
+      "description": "Composite health score for the data product (availability 35%, latency 25%, freshness 25%, error rate 15%).",
+      "gridPos": {
+        "x": 5,
+        "y": 62,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.8
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "data_product_health_score{environment=\"$environment\", product=~\"$product\"}"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "stat",
+      "title": "Error Rate",
+      "description": "Current error rate for the data product. >2% = warning, >10% = critical.",
+      "gridPos": {
+        "x": 9,
+        "y": 62,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.02
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "data_product_error_rate{environment=\"$environment\", product=~\"$product\"}"
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "type": "stat",
+      "title": "Data Freshness",
+      "description": "Seconds since last successful data refresh. High value = stale data reaching consumers.",
+      "gridPos": {
+        "x": 13,
+        "y": 62,
+        "w": 5,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 900
+              },
+              {
+                "color": "red",
+                "value": 3600
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "data_product_freshness_seconds{environment=\"$environment\", product=~\"$product\"}"
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "type": "stat",
+      "title": "Error Budget %",
+      "description": "Percentage of 1% error budget remaining. 0% = budget fully exhausted, pipeline must not introduce further failures.",
+      "gridPos": {
+        "x": 18,
+        "y": 62,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "noValue": "0",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 50
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "clamp_min((data_product_slo_compliance_ratio{environment=\"$environment\", product=~\"$product\"} - 0.990) / 0.010 * 100, 0)"
+        }
+      ]
+    },
+    {
+      "id": 206,
+      "type": "row",
+      "title": "STREAMING METRICS \u2014 Kafka / Real-time Pipelines",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 66,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 50,
+      "type": "timeseries",
+      "title": "Consumer Lag \u2014 Per Topic",
+      "description": "Kafka consumer lag per topic. Sustained high lag = processing bottleneck or consumer slowdown. Spike = backpressure event.",
+      "gridPos": {
+        "x": 0,
+        "y": 67,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "min"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "expr": "kafka_consumer_lag_sum{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}",
+          "legendFormat": "{{pipeline_id}} / {{topic}}"
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "Throughput \u2014 Messages / sec",
+      "description": "Message processing throughput per topic. Drop in throughput with rising lag = consumer health issue.",
+      "gridPos": {
+        "x": 8,
+        "y": 67,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "min"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "mps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "expr": "kafka_consumer_throughput_msgs_per_sec{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}",
+          "legendFormat": "{{pipeline_id}} / {{topic}}"
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "type": "timeseries",
+      "title": "End-to-End Latency \u2014 ms",
+      "description": "End-to-end processing latency from produce to consume. Correlates with SLO latency SLI on the data product.",
+      "gridPos": {
+        "x": 16,
+        "y": 67,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "min"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "refId": "A",
+          "expr": "kafka_end_to_end_latency_ms{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}",
+          "legendFormat": "{{pipeline_id}} / {{topic}}"
+        }
+      ]
+    },
+    {
+      "id": 207,
+      "type": "row",
+      "title": "LOGS \u2014 Trace-Correlated (Loki)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 75,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 60,
+      "uid": "pipeline-logs",
+      "title": "Pipeline Logs \u2014 Filtered by Pipeline & Trace",
+      "description": "Loki logs for the selected pipeline. When a trace_id is selected, logs are further filtered to that run. Currently empty: log shipping to Loki not yet configured in the simulator. This panel is ready for production log integration.",
+      "type": "logs",
+      "gridPos": {
+        "x": 0,
+        "y": 76,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-dev"
+      },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-dev"
+          },
+          "refId": "A",
+          "expr": "{environment=\"$environment\"} |= \"$pipeline_id\"",
+          "queryType": "range"
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "uid": "l2-nav-footer",
+      "title": "",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 85,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "#### Quick Navigation\n| Destination | Link |\n|---|---|\n| Data Marketplace Home | [Open](/d/marketplace-home?var-environment=${environment}) |\n| L1 Estate Health (SLO overview) | [Open](/d/watch-l1-estate?var-environment=${environment}&var-portfolio=${portfolio}&var-product=${product}) |\n| L3 Infrastructure | [Open](/d/watch-l3-infra?var-environment=${environment}) |\n| Trace Explorer (Tempo) | [Open in Explore](/explore?left=%7B%22datasource%22:%22tempo-dev%22%7D) |\n\n**Drill-down path:** Run \u2192 Trace ID \u2192 Span Waterfall \u2192 Phase Detail \u2192 Root Cause \u2192 DQ Events \u2192 Logs"
+      },
+      "transparent": true
     }
-
-  ]
+  ],
+  "links": [
+    {
+      "title": "\u2190 Homepage",
+      "url": "/d/marketplace-home?var-environment=${environment}",
+      "targetBlank": false
+    },
+    {
+      "title": "\u2190 L1 Estate Health",
+      "url": "/d/watch-l1-estate?var-environment=${environment}&var-portfolio=${portfolio}&var-product=${product}",
+      "targetBlank": false
+    },
+    {
+      "title": "L3 Infrastructure \u2192",
+      "url": "/d/watch-l3-infra?var-environment=${environment}",
+      "targetBlank": false
+    }
+  ],
+  "id": 3
 }
