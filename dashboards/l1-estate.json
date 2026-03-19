@@ -628,7 +628,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 180
+                "value": 150
               },
               {
                 "id": "links",
@@ -657,7 +657,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 160
+                "value": 120
               }
             ]
           },
@@ -669,7 +669,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 160
+                "value": 120
               }
             ]
           },
@@ -681,7 +681,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 170
+                "value": 130
               }
             ]
           },
@@ -701,7 +701,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 120
+                "value": 95
               },
               {
                 "id": "custom.cellOptions",
@@ -752,7 +752,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 130
+                "value": 110
               },
               {
                 "id": "custom.cellOptions",
@@ -799,7 +799,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 90
               },
               {
                 "id": "custom.cellOptions",
@@ -846,7 +846,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 100
+                "value": 85
               },
               {
                 "id": "custom.cellOptions",
@@ -893,7 +893,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 120
+                "value": 100
               },
               {
                 "id": "custom.cellOptions",
@@ -940,7 +940,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 100
+                "value": 85
               },
               {
                 "id": "custom.cellOptions",
@@ -987,7 +987,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 85
               },
               {
                 "id": "thresholds",
@@ -1027,7 +1027,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 130
+                "value": 105
               },
               {
                 "id": "custom.cellOptions",
@@ -1245,7 +1245,7 @@
         "type": "prometheus",
         "uid": "prometheus-dev"
       },
-      "description": "Rolling SLO compliance per product, sorted worst-first. If no rows, no products match the current filter \u2014 reset Portfolio / Domain / Product to All.",
+      "description": "Rolling SLO compliance per product, sorted worst-first. If empty, no products match current filter \u2014 reset filters to All.",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -1349,7 +1349,7 @@
             "type": "prometheus",
             "uid": "prometheus-dev"
           },
-          "expr": "sort(data_product_slo_compliance_ratio{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"})\nor\nlabel_replace(label_replace(label_replace(label_replace(absent(data_product_slo_compliance_ratio{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}),\"product\",\"No products match filter \u2014 reset to All\",\"\",\"\"),\"portfolio\",\"\u2014\",\"\",\"\"),\"domain\",\"\u2014\",\"\",\"\"),\"owner\",\"Reset filters\",\"\",\"\")",
+          "expr": "sort(data_product_slo_compliance_ratio{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"})",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -1515,7 +1515,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 180
+                "value": 150
               }
             ]
           },
@@ -1527,7 +1527,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 160
+                "value": 135
               },
               {
                 "id": "mappings",
@@ -1581,7 +1581,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 160
+                "value": 110
               },
               {
                 "id": "decimals",
@@ -1684,11 +1684,24 @@
         "type": "prometheus",
         "uid": "prometheus-dev"
       },
-      "description": "Cumulative DQ violation counter. A single \u201cNo DQ violations\u201d row means the current filter scope has no violations recorded.",
+      "description": "Sum of all DQ violations across products matching current filter. Green = zero violations recorded.",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
-          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "0 \u2014 No violations recorded"
+                }
+              },
+              "type": "value"
+            }
+          ],
           "noValue": "0",
           "thresholds": {
             "mode": "absolute",
@@ -1696,69 +1709,40 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 100
               }
             ]
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "DQ Violations"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "short"
-              },
-              {
-                "id": "custom.width",
-                "value": 130
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "mode": "basic",
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 100
-                    },
-                    {
-                      "color": "red",
-                      "value": 500
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 3,
+        "w": 7,
         "x": 0,
         "y": 37
       },
-      "id": 14,
+      "id": 30,
       "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "show": false
+        "colorMode": "background",
+        "graphMode": "none",
+        "noValue": "0",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
-        "showHeader": true
+        "textMode": "value_and_name"
       },
       "targets": [
         {
@@ -1766,49 +1750,92 @@
             "type": "prometheus",
             "uid": "prometheus-dev"
           },
-          "expr": "data_product_dq_violation_total{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}\nor\nlabel_replace(label_replace(label_replace(label_replace(absent(data_product_dq_violation_total{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}),\"product\",\"No DQ violations recorded \u2014 all products clean\",\"\",\"\"),\"portfolio\",\"\u2014\",\"\",\"\"),\"domain\",\"\u2014\",\"\",\"\"),\"owner\",\"\u2014\",\"\",\"\")",
-          "format": "table",
+          "expr": "sum(data_product_dq_violation_total{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}) or vector(0)",
           "instant": true,
-          "legendFormat": "",
-          "range": false,
           "refId": "A"
         }
       ],
-      "title": "DQ Violations",
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "environment": true,
-              "instance": true,
-              "job": true
-            },
-            "indexByName": {},
-            "renameByName": {
-              "Value": "DQ Violations",
-              "domain": "Domain",
-              "owner": "Owner",
-              "portfolio": "Portfolio",
-              "product": "Product"
+      "title": "DQ Violations \u2014 Scope Total",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "description": "Number of products in scope that have at least 1 DQ violation recorded.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "0 \u2014 All products clean \u2713"
+                }
+              },
+              "type": "value"
             }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": [
+          ],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
               {
-                "desc": true,
-                "displayName": "DQ Violations"
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
               }
             ]
           }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 5,
+        "x": 7,
+        "y": 37
+      },
+      "id": 31,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "noValue": "0",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "count(data_product_dq_violation_total{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"} > 0) or vector(0)",
+          "instant": true,
+          "refId": "A"
         }
       ],
-      "type": "table"
+      "title": "Products with Violations",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -1869,6 +1896,187 @@
       ],
       "title": "Volume \u2014 Records/hr",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-dev"
+      },
+      "description": "Products with recorded DQ violations. If table is empty, see stat panels above for confirmation that scope is clean.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Product"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Portfolio"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Domain"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Owner"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DQ Violations"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 100
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "id": 14,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-dev"
+          },
+          "expr": "data_product_dq_violation_total{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "DQ Violations",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "environment": true,
+              "instance": true,
+              "job": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value": "DQ Violations",
+              "domain": "Domain",
+              "owner": "Owner",
+              "portfolio": "Portfolio",
+              "product": "Product"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": [
+              {
+                "desc": true,
+                "displayName": "DQ Violations"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
     },
     {
       "collapsed": false,
@@ -2062,12 +2270,24 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Alert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "Severity"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 100
+                "value": 90
               },
               {
                 "id": "custom.cellOptions",
@@ -2111,24 +2331,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Alert"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 260
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "Product"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 180
+                "value": 160
               }
             ]
           },
@@ -2140,7 +2348,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 160
+                "value": 140
               }
             ]
           },
@@ -2179,7 +2387,7 @@
             "type": "prometheus",
             "uid": "prometheus-dev"
           },
-          "expr": "ALERTS{alertstate=\"firing\",portfolio=~\"$portfolio\",product=~\"$product\"}\nor\nlabel_replace(label_replace(label_replace(label_replace(absent(ALERTS{alertstate=\"firing\",portfolio=~\"$portfolio\",product=~\"$product\"}),\"alertname\",\"No active alerts \u2014 all products healthy\",\"\",\"\"),\"severity\",\"none\",\"\",\"\"),\"product\",\"All products healthy\",\"\",\"\"),\"portfolio\",\"$portfolio\",\"\",\"\")",
+          "expr": "ALERTS{alertstate=\"firing\",portfolio=~\"$portfolio\",product=~\"$product\"}\nor\nlabel_replace(label_replace(label_replace(label_replace((absent(ALERTS{alertstate=\"firing\",portfolio=~\"$portfolio\",product=~\"$product\"}) * 0),\"alertname\",\"No active alerts \u2014 all products healthy\",\"\",\"\"),\"severity\",\"none\",\"\",\"\"),\"product\",\"All products healthy\",\"\",\"\"),\"portfolio\",\"$portfolio\",\"\",\"\")",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -2414,5 +2622,5 @@
   "timezone": "browser",
   "title": "L1 \u2014 Data Product Estate Health",
   "uid": "watch-l1-estate",
-  "version": 16
+  "version": 18
 }
