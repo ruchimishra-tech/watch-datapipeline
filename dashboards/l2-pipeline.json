@@ -10,7 +10,7 @@
     "debug"
   ],
   "schemaVersion": 38,
-  "version": 15,
+  "version": 17,
   "refresh": "30s",
   "time": {
     "from": "now-24h",
@@ -141,8 +141,8 @@
         "label": "Trace ID",
         "type": "textbox",
         "current": {
-          "text": "26fb9d8ea54897d5f2cd1047cc5fc371",
-          "value": "26fb9d8ea54897d5f2cd1047cc5fc371"
+          "text": "f90697ba497b96681acf6b2f5449469e",
+          "value": "f90697ba497b96681acf6b2f5449469e"
         },
         "hide": 0,
         "description": "Paste a Trace ID, or click any row in the Runs table to auto-fill."
@@ -1070,6 +1070,7 @@
           "queryType": "traceql",
           "tableType": "traces",
           "query": "{name=\"pipeline.run\" && span.pipeline.id=~\"$pipeline_id\" && span.deployment.environment=\"$environment\"}",
+          "filters": [],
           "limit": 100
         }
       ]
