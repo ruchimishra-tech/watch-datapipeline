@@ -1,17 +1,16 @@
 {
   "uid": "watch-l2-pipeline",
   "title": "L2 \u2014 Pipeline Observability & Debug",
-  "description": "Deep-debug dashboard. Select Domain \u2192 Pipeline to view runs. Click a Trace ID to load span waterfall, phase breakdown, root cause, and DQ events.",
+  "description": "Pipeline debug dashboard. Default view: risk-scoring pipeline with a known failed trace. Select Domain \u2192 Pipeline to explore other pipelines. Click any Trace ID in the Runs table to load the full trace below.",
   "tags": [
     "watch",
     "l2",
     "pipeline",
     "tracing",
-    "debug",
-    "slo"
+    "debug"
   ],
   "schemaVersion": 38,
-  "version": 13,
+  "version": 15,
   "refresh": "30s",
   "time": {
     "from": "now-24h",
@@ -66,8 +65,8 @@
         "includeAll": true,
         "allValue": ".*",
         "current": {
-          "text": "All",
-          "value": "$__all"
+          "text": "risk",
+          "value": "risk"
         },
         "hide": 0,
         "multi": false
@@ -87,12 +86,12 @@
         "includeAll": true,
         "allValue": ".*",
         "current": {
-          "text": "All",
-          "value": "$__all"
+          "text": "fraud-detection-engine",
+          "value": "fraud-detection-engine"
         },
         "hide": 0,
         "multi": false,
-        "description": "Data product for SLO correlation. Pre-set when navigating from L1."
+        "description": "Select the data product whose SLO metrics are shown in the correlation panel."
       },
       {
         "name": "pipeline_id",
@@ -109,12 +108,12 @@
         "includeAll": true,
         "allValue": ".*",
         "current": {
-          "text": "All",
-          "value": "$__all"
+          "text": "risk-scoring",
+          "value": "risk-scoring"
         },
         "hide": 0,
         "multi": false,
-        "description": "Select a pipeline to see its runs and metrics."
+        "description": "Select a pipeline to view its runs, metrics, and trace data."
       },
       {
         "name": "owner",
@@ -139,14 +138,14 @@
       },
       {
         "name": "trace_id",
-        "label": "Trace ID (Run)",
+        "label": "Trace ID",
         "type": "textbox",
         "current": {
-          "text": "",
-          "value": ""
+          "text": "26fb9d8ea54897d5f2cd1047cc5fc371",
+          "value": "26fb9d8ea54897d5f2cd1047cc5fc371"
         },
         "hide": 0,
-        "description": "Paste or click a Trace ID to load the waterfall below."
+        "description": "Paste a Trace ID, or click any row in the Runs table to auto-fill."
       },
       {
         "name": "portfolio",
@@ -156,36 +155,19 @@
           "text": "All",
           "value": "All"
         },
-        "hide": 2,
-        "description": "Context-only: portfolio passed from L1 via URL param."
+        "hide": 2
       }
     ]
   },
   "panels": [
     {
-      "id": 50,
-      "title": "",
-      "type": "text",
-      "gridPos": {
-        "x": 0,
-        "y": 0,
-        "w": 24,
-        "h": 1
-      },
-      "options": {
-        "mode": "html",
-        "content": "<div style=\"padding:4px 8px;font-size:13px;color:#aaa;\"><a href=\"/d/marketplace-home?var-environment=${environment}\" style=\"color:#5794f2;\">&#8592; Marketplace</a> &nbsp;&#8250;&nbsp; <a href=\"/d/watch-l1-estate?var-environment=${environment}&var-portfolio=${portfolio}&var-product=${product}\" style=\"color:#5794f2;\">L1 Estate Health</a> &nbsp;&#8250;&nbsp; <strong style=\"color:#e0e0e0;\">L2 Pipeline Debug</strong> &nbsp;|&nbsp; <a href=\"/d/watch-l3-infra?var-environment=${environment}\" style=\"color:#5794f2;\">L3 Infrastructure &#8594;</a></div>"
-      },
-      "transparent": true
-    },
-    {
       "id": 200,
       "type": "row",
-      "title": "PIPELINE HEALTH SUMMARY \u2014 ${pipeline_id}",
+      "title": "PIPELINE HEALTH \u2014 ${pipeline_id}",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 1,
+        "y": 0,
         "w": 24,
         "h": 1
       }
@@ -194,10 +176,10 @@
       "id": 20,
       "type": "stat",
       "title": "Success Rate (24h)",
-      "description": "24h success rate for selected pipeline(s).",
+      "description": "",
       "gridPos": {
         "x": 0,
-        "y": 2,
+        "y": 1,
         "w": 4,
         "h": 4
       },
@@ -263,10 +245,10 @@
       "id": 21,
       "type": "stat",
       "title": "Total Runs (24h)",
-      "description": "Total pipeline runs in the last 24 hours.",
+      "description": "",
       "gridPos": {
         "x": 4,
-        "y": 2,
+        "y": 1,
         "w": 4,
         "h": 4
       },
@@ -323,10 +305,10 @@
       "id": 25,
       "type": "stat",
       "title": "Failures (24h)",
-      "description": "Failed runs in the last 24 hours.",
+      "description": "",
       "gridPos": {
         "x": 8,
-        "y": 2,
+        "y": 1,
         "w": 4,
         "h": 4
       },
@@ -383,7 +365,7 @@
           },
           "refId": "A",
           "instant": true,
-          "expr": "sum(increase(simulator_pipeline_runs_total{status=\"failed\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h])) or vector(0)"
+          "expr": "sum(increase(simulator_pipeline_runs_total{status=\"failed\",  pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h])) or vector(0)"
         }
       ]
     },
@@ -391,10 +373,10 @@
       "id": 22,
       "type": "stat",
       "title": "Last Run Duration",
-      "description": "Duration of the most recent completed run.",
+      "description": "",
       "gridPos": {
         "x": 12,
-        "y": 2,
+        "y": 1,
         "w": 4,
         "h": 4
       },
@@ -460,10 +442,10 @@
       "id": 23,
       "type": "stat",
       "title": "SLA Breaches (24h)",
-      "description": "Runs that breached SLA threshold.",
+      "description": "",
       "gridPos": {
         "x": 16,
-        "y": 2,
+        "y": 1,
         "w": 4,
         "h": 4
       },
@@ -528,10 +510,10 @@
       "id": 24,
       "type": "stat",
       "title": "Failure Rate (6h)",
-      "description": "6h rolling failure rate.",
+      "description": "",
       "gridPos": {
         "x": 20,
-        "y": 2,
+        "y": 1,
         "w": 4,
         "h": 4
       },
@@ -589,30 +571,18 @@
           },
           "refId": "A",
           "instant": true,
-          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"failed\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[6h])) / sum(rate(simulator_pipeline_runs_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[6h]))"
+          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"failed\",  pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[6h])) / sum(rate(simulator_pipeline_runs_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[6h]))"
         }
       ]
-    },
-    {
-      "id": 201,
-      "type": "row",
-      "title": "PERFORMANCE TRENDS",
-      "collapsed": false,
-      "gridPos": {
-        "x": 0,
-        "y": 6,
-        "w": 24,
-        "h": 1
-      }
     },
     {
       "id": 26,
       "type": "timeseries",
       "title": "Run Rate \u2014 Success vs Failure",
-      "description": "Run throughput rate. Failures spike on intermittent or systematic issues.",
+      "description": "Run throughput. Failure spikes indicate reliability incidents.",
       "gridPos": {
         "x": 0,
-        "y": 7,
+        "y": 5,
         "w": 12,
         "h": 8
       },
@@ -639,7 +609,7 @@
           "unit": "ops",
           "custom": {
             "lineWidth": 2,
-            "fillOpacity": 8
+            "fillOpacity": 10
           }
         },
         "overrides": []
@@ -660,7 +630,7 @@
             "uid": "prometheus-dev"
           },
           "refId": "B",
-          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"failed\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[30m])) * 60",
+          "expr": "sum(rate(simulator_pipeline_runs_total{status=\"failed\",  pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[30m])) * 60",
           "legendFormat": "\u2717 Failure / min"
         }
       ]
@@ -669,10 +639,10 @@
       "id": 27,
       "type": "timeseries",
       "title": "Pipeline Duration \u2014 per Run",
-      "description": "Last observed run duration per pipeline. Sustained growth = performance regression.",
+      "description": "Last observed run duration. Sustained growth = regression or data volume increase.",
       "gridPos": {
         "x": 12,
-        "y": 7,
+        "y": 5,
         "w": 12,
         "h": 8
       },
@@ -699,7 +669,7 @@
           "unit": "s",
           "custom": {
             "lineWidth": 2,
-            "fillOpacity": 8
+            "fillOpacity": 10
           },
           "thresholds": {
             "mode": "absolute",
@@ -739,11 +709,11 @@
     {
       "id": 202,
       "type": "row",
-      "title": "PIPELINE RUNS \u2014 Click a Trace ID to drill into that run",
+      "title": "PIPELINE RUNS \u2014 Click a Trace ID row to load the waterfall below",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 13,
         "w": 24,
         "h": 1
       }
@@ -751,14 +721,14 @@
     {
       "id": 1,
       "title": "Pipeline Runs",
-      "description": "All runs for selected pipeline(s) queried from Tempo. Click a Trace ID row to load the waterfall below.",
+      "description": "All runs for the selected pipeline, live from Tempo. Click the **Trace ID** cell (blue) to load the full trace below.",
       "type": "table",
       "transparent": false,
       "gridPos": {
         "x": 0,
-        "y": 16,
+        "y": 14,
         "w": 24,
-        "h": 11
+        "h": 10
       },
       "datasource": {
         "type": "tempo",
@@ -770,20 +740,17 @@
         },
         "sortBy": [
           {
-            "displayName": "Started",
+            "displayName": "Start time",
             "desc": true
           }
         ],
-        "cellHeight": "sm",
-        "frameIndex": 0
+        "cellHeight": "sm"
       },
       "fieldConfig": {
         "defaults": {
           "custom": {
             "align": "left",
-            "filterable": true,
-            "displayMode": "auto",
-            "inspect": false
+            "filterable": true
           },
           "noValue": "\u2014"
         },
@@ -791,20 +758,16 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "traceIdHidden"
+              "options": "traceID"
             },
             "properties": [
-              {
-                "id": "custom.hidden",
-                "value": false
-              },
               {
                 "id": "displayName",
                 "value": "Trace ID"
               },
               {
                 "id": "custom.width",
-                "value": 250
+                "value": 280
               },
               {
                 "id": "custom.displayMode",
@@ -822,7 +785,7 @@
                 "value": [
                   {
                     "title": "Load trace \u2192",
-                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-pipeline_id=${pipeline_id}&var-domain=${domain}&var-product=${product}&var-portfolio=${portfolio}&var-trace_id=${__value.raw}",
+                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-domain=${domain}&var-product=${product}&var-pipeline_id=${pipeline_id}&var-portfolio=${portfolio}&var-trace_id=${__value.raw}",
                     "targetBlank": false
                   }
                 ]
@@ -832,16 +795,109 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "pipeline.name"
+              "options": "traceIdHidden"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": false
+              },
+              {
+                "id": "displayName",
+                "value": "Trace ID"
+              },
+              {
+                "id": "custom.width",
+                "value": 280
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-blue",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Load trace \u2192",
+                    "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-domain=${domain}&var-product=${product}&var-pipeline_id=${pipeline_id}&var-portfolio=${portfolio}&var-trace_id=${__value.raw}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rootTraceName"
             },
             "properties": [
               {
                 "id": "displayName",
-                "value": "Pipeline"
+                "value": "Run Name"
               },
               {
                 "id": "custom.width",
-                "value": 210
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rootServiceName"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "durationMs"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duration (ms)"
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "startTime"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Started"
+              },
+              {
+                "id": "custom.width",
+                "value": 190
               }
             ]
           },
@@ -878,10 +934,50 @@
                         "color": "red",
                         "text": "\u2717 failed",
                         "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "statusCode"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Status"
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "grey",
+                        "text": "UNSET",
+                        "index": 0
                       },
-                      "running": {
-                        "color": "blue",
-                        "text": "\u27f3 running",
+                      "1": {
+                        "color": "green",
+                        "text": "\u2713 OK",
+                        "index": 1
+                      },
+                      "2": {
+                        "color": "red",
+                        "text": "\u2717 ERROR",
                         "index": 2
                       }
                     }
@@ -893,85 +989,77 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "duration"
+              "options": "spanID"
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "ns"
-              },
-              {
-                "id": "displayName",
-                "value": "Duration"
-              },
-              {
-                "id": "custom.width",
-                "value": 110
+                "id": "custom.hidden",
+                "value": true
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "pipeline.type"
+              "options": "parentSpanID"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "Type"
-              },
-              {
-                "id": "custom.width",
-                "value": 90
+                "id": "custom.hidden",
+                "value": true
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "time"
+              "options": "name"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "Started"
-              },
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "serviceName"
+            },
+            "properties": [
               {
-                "id": "custom.width",
-                "value": 185
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "traceService"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "traceName"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
               }
             ]
           }
         ]
       },
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "spanID": true,
-              "traceService": true,
-              "traceName": true,
-              "name": true,
-              "pipeline.id": true,
-              "pipeline.run_id": true,
-              "deployment.environment": true,
-              "pipeline.duration_ms": true,
-              "pipeline.failure_phase": true,
-              "pipeline.failure_reason": true
-            },
-            "indexByName": {
-              "traceIdHidden": 0,
-              "pipeline.name": 1,
-              "pipeline.status": 2,
-              "pipeline.type": 3,
-              "duration": 4,
-              "time": 5
-            },
-            "renameByName": {}
-          }
-        }
-      ],
       "targets": [
         {
           "datasource": {
@@ -980,8 +1068,8 @@
           },
           "refId": "A",
           "queryType": "traceql",
-          "query": "{span.pipeline.id=~\"$pipeline_id\" && span.deployment.environment=\"$environment\" && name=\"pipeline.run\"} | select(span.pipeline.name, span.pipeline.id, span.pipeline.status, span.pipeline.type, span.pipeline.failure_phase)",
-          "tableType": "spans",
+          "tableType": "traces",
+          "query": "{name=\"pipeline.run\" && span.pipeline.id=~\"$pipeline_id\" && span.deployment.environment=\"$environment\"}",
           "limit": 100
         }
       ]
@@ -989,11 +1077,11 @@
     {
       "id": 203,
       "type": "row",
-      "title": "TRACE DETAIL \u2014 ${trace_id}   \u00b7   \u2191 Select a run above to populate this section",
+      "title": "TRACE DETAIL \u2014 ${trace_id}     \u00b7     \u2191 Click a Trace ID above to change run",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 27,
+        "y": 24,
         "w": 24,
         "h": 1
       }
@@ -1001,12 +1089,11 @@
     {
       "id": 2,
       "title": "Span Waterfall \u2014 Extract \u2192 Transform \u2192 Load",
-      "description": "Full trace waterfall for the selected run. Red spans = failed stage. Click any span bar to see attributes: row counts, operations, source/target, error message.",
+      "description": "Full trace for the selected run. Red bars = failed spans. Click any span bar to see attributes: row count, source, target, error message.",
       "type": "traces",
-      "transparent": false,
       "gridPos": {
         "x": 0,
-        "y": 28,
+        "y": 25,
         "w": 24,
         "h": 14
       },
@@ -1032,12 +1119,11 @@
     {
       "id": 3,
       "title": "Phase Spans \u2014 Duration & Status",
-      "description": "One row per ETL phase. ERROR status = this phase caused the failure.",
+      "description": "ETL phase breakdown. ERROR = this phase caused the failure.",
       "type": "table",
-      "transparent": false,
       "gridPos": {
         "x": 0,
-        "y": 42,
+        "y": 39,
         "w": 14,
         "h": 9
       },
@@ -1060,8 +1146,7 @@
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "align": "left",
-            "displayMode": "auto"
+            "align": "left"
           },
           "noValue": "\u2014"
         },
@@ -1092,7 +1177,7 @@
                     "options": {
                       "1": {
                         "color": "green",
-                        "text": "OK",
+                        "text": "\u2713 OK",
                         "index": 0
                       }
                     }
@@ -1102,7 +1187,7 @@
                     "options": {
                       "2": {
                         "color": "red",
-                        "text": "ERROR",
+                        "text": "\u2717 ERROR",
                         "index": 1
                       }
                     }
@@ -1143,7 +1228,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 160
+                "value": 155
               }
             ]
           },
@@ -1230,12 +1315,11 @@
     {
       "id": 30,
       "title": "Root Cause Summary",
-      "description": "Spans with ERROR status. Empty = all phases succeeded.",
+      "description": "Spans with ERROR status. If empty, all phases succeeded.",
       "type": "table",
-      "transparent": false,
       "gridPos": {
         "x": 14,
-        "y": 42,
+        "y": 39,
         "w": 10,
         "h": 9
       },
@@ -1253,8 +1337,7 @@
         "defaults": {
           "custom": {
             "align": "left",
-            "wrap": true,
-            "displayMode": "auto"
+            "wrap": true
           },
           "noValue": "\u2014"
         },
@@ -1285,7 +1368,7 @@
                     "options": {
                       "1": {
                         "color": "green",
-                        "text": "OK",
+                        "text": "\u2713 OK",
                         "index": 0
                       }
                     }
@@ -1295,7 +1378,7 @@
                     "options": {
                       "2": {
                         "color": "red",
-                        "text": "ERROR",
+                        "text": "\u2717 ERROR",
                         "index": 1
                       }
                     }
@@ -1383,24 +1466,23 @@
     {
       "id": 204,
       "type": "row",
-      "title": "DATA QUALITY EVENTS \u2014 For Selected Run",
+      "title": "DATA QUALITY EVENTS \u2014 Run: ${trace_id}",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 51,
+        "y": 48,
         "w": 24,
         "h": 1
       }
     },
     {
       "id": 4,
-      "title": "DQ Events \u2014 Extract Phase",
-      "description": "DQ check events on the etl.extract span. Empty = no DQ events for this run.",
+      "title": "DQ Events",
+      "description": "DQ check events on the etl.extract span for this run. Empty = no violations.",
       "type": "table",
-      "transparent": false,
       "gridPos": {
         "x": 0,
-        "y": 52,
+        "y": 49,
         "w": 24,
         "h": 7
       },
@@ -1417,8 +1499,7 @@
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "align": "left",
-            "displayMode": "auto"
+            "align": "left"
           },
           "noValue": "\u2014"
         },
@@ -1542,12 +1623,7 @@
               "tags": true,
               "startTime": true
             },
-            "renameByName": {
-              "operationName": "Phase",
-              "statusCode": "DQ Status",
-              "duration": "Duration (ms)",
-              "logs": "DQ Events"
-            }
+            "renameByName": {}
           }
         }
       ],
@@ -1570,7 +1646,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 59,
+        "y": 56,
         "w": 24,
         "h": 1
       }
@@ -1579,10 +1655,10 @@
       "id": 40,
       "type": "stat",
       "title": "SLO Compliance",
-      "description": "Rolling SLO compliance for the associated data product.",
+      "description": "",
       "gridPos": {
         "x": 0,
-        "y": 60,
+        "y": 57,
         "w": 5,
         "h": 4
       },
@@ -1648,10 +1724,10 @@
       "id": 41,
       "type": "stat",
       "title": "Health Score",
-      "description": "Composite health score for the data product.",
+      "description": "",
       "gridPos": {
         "x": 5,
-        "y": 60,
+        "y": 57,
         "w": 4,
         "h": 4
       },
@@ -1717,10 +1793,10 @@
       "id": 42,
       "type": "stat",
       "title": "Error Rate",
-      "description": "Current error rate for the data product.",
+      "description": "",
       "gridPos": {
         "x": 9,
-        "y": 60,
+        "y": 57,
         "w": 4,
         "h": 4
       },
@@ -1786,10 +1862,10 @@
       "id": 43,
       "type": "stat",
       "title": "Data Freshness",
-      "description": "Seconds since last successful data refresh.",
+      "description": "",
       "gridPos": {
         "x": 13,
-        "y": 60,
+        "y": 57,
         "w": 5,
         "h": 4
       },
@@ -1855,10 +1931,10 @@
       "id": 44,
       "type": "stat",
       "title": "Error Budget %",
-      "description": "Percentage of 1% error budget remaining.",
+      "description": "",
       "gridPos": {
         "x": 18,
-        "y": 60,
+        "y": 57,
         "w": 6,
         "h": 4
       },
@@ -1927,7 +2003,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 64,
+        "y": 61,
         "w": 24,
         "h": 1
       }
@@ -1935,11 +2011,11 @@
     {
       "id": 50,
       "type": "timeseries",
-      "title": "Consumer Lag \u2014 Per Topic",
-      "description": "Kafka consumer lag per topic. Sustained high lag = processing bottleneck.",
+      "title": "Consumer Lag",
+      "description": "Kafka consumer lag per topic.",
       "gridPos": {
         "x": 0,
-        "y": 65,
+        "y": 62,
         "w": 8,
         "h": 8
       },
@@ -1966,7 +2042,7 @@
           "unit": "short",
           "custom": {
             "lineWidth": 2,
-            "fillOpacity": 8
+            "fillOpacity": 10
           }
         },
         "overrides": []
@@ -1987,10 +2063,10 @@
       "id": 51,
       "type": "timeseries",
       "title": "Throughput \u2014 Msg/sec",
-      "description": "Message processing throughput per topic.",
+      "description": "Message throughput per topic.",
       "gridPos": {
         "x": 8,
-        "y": 65,
+        "y": 62,
         "w": 8,
         "h": 8
       },
@@ -2017,7 +2093,7 @@
           "unit": "mps",
           "custom": {
             "lineWidth": 2,
-            "fillOpacity": 8
+            "fillOpacity": 10
           }
         },
         "overrides": []
@@ -2037,11 +2113,11 @@
     {
       "id": 52,
       "type": "timeseries",
-      "title": "End-to-End Latency \u2014 ms",
-      "description": "End-to-end processing latency from produce to consume.",
+      "title": "End-to-End Latency",
+      "description": "End-to-end latency from produce to consume.",
       "gridPos": {
         "x": 16,
-        "y": 65,
+        "y": 62,
         "w": 8,
         "h": 8
       },
@@ -2068,7 +2144,7 @@
           "unit": "ms",
           "custom": {
             "lineWidth": 2,
-            "fillOpacity": 8
+            "fillOpacity": 10
           }
         },
         "overrides": []
@@ -2092,7 +2168,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 73,
+        "y": 70,
         "w": 24,
         "h": 1
       }
@@ -2102,10 +2178,9 @@
       "title": "Pipeline Logs",
       "description": "Loki logs filtered by pipeline. Set trace_id to narrow to a single run.",
       "type": "logs",
-      "transparent": false,
       "gridPos": {
         "x": 0,
-        "y": 74,
+        "y": 71,
         "w": 24,
         "h": 9
       },
@@ -2116,9 +2191,6 @@
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": true,
         "showTime": true,
         "sortOrder": "Descending",
         "wrapLogMessage": true
@@ -2141,13 +2213,13 @@
       "type": "text",
       "gridPos": {
         "x": 0,
-        "y": 83,
+        "y": 80,
         "w": 24,
         "h": 3
       },
       "options": {
         "mode": "markdown",
-        "content": "#### Quick Navigation\n| Destination | Link |\n|---|---|\n| Data Marketplace Home | [Open](/d/marketplace-home?var-environment=${environment}) |\n| L1 Estate Health | [Open](/d/watch-l1-estate?var-environment=${environment}&var-portfolio=${portfolio}&var-product=${product}) |\n| L3 Infrastructure | [Open](/d/watch-l3-infra?var-environment=${environment}) |\n| Trace Explorer (Tempo) | [Open in Explore](/explore?left=%7B%22datasource%22:%22tempo-dev%22%7D) |\n\n**Drill-down path:** Domain \u2192 Pipeline \u2192 Run \u2192 Trace ID \u2192 Span Waterfall \u2192 Phase Detail \u2192 Root Cause \u2192 DQ Events"
+        "content": "#### Navigation\n| | Link |\n|---|---|\n| \u2190 Marketplace Home | [Open](/d/marketplace-home?var-environment=${environment}) |\n| \u2190 L1 Estate Health | [Open](/d/watch-l1-estate?var-environment=${environment}&var-portfolio=${portfolio}&var-product=${product}) |\n| L3 Infrastructure \u2192 | [Open](/d/watch-l3-infra?var-environment=${environment}) |\n| Trace Explorer | [Open in Explore](/explore?left=%7B%22datasource%22:%22tempo-dev%22%7D) |\n\n**End-to-end demo path:** Select *Domain: risk* \u2192 *Pipeline: risk-scoring* \u2192 click a **Trace ID** in Runs table \u2192 waterfall + phase spans + root cause load below."
       },
       "transparent": true
     }
