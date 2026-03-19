@@ -1245,7 +1245,7 @@
         "type": "prometheus",
         "uid": "prometheus-dev"
       },
-      "description": "Rolling SLO compliance ratio. Red = active breach (<99%). Products sorted worst first.",
+      "description": "Rolling SLO compliance per product, sorted worst-first. If no rows, no products match the current filter \u2014 reset Portfolio / Domain / Product to All.",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -1265,6 +1265,18 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Product"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "SLO Compliance"
             },
             "properties": [
@@ -1275,6 +1287,10 @@
               {
                 "id": "decimals",
                 "value": 4
+              },
+              {
+                "id": "custom.width",
+                "value": 140
               },
               {
                 "id": "custom.cellOptions",
@@ -1302,48 +1318,11 @@
                     }
                   ]
                 }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Health Score"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percentunit"
               },
               {
-                "id": "decimals",
-                "value": 2
-              },
-              {
-                "id": "custom.cellOptions",
+                "id": "color",
                 "value": {
-                  "mode": "basic",
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "red",
-                      "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 0.8
-                    },
-                    {
-                      "color": "green",
-                      "value": 0.95
-                    }
-                  ]
+                  "mode": "thresholds"
                 }
               }
             ]
@@ -1370,35 +1349,16 @@
             "type": "prometheus",
             "uid": "prometheus-dev"
           },
-          "expr": "data_product_slo_compliance_ratio{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}",
+          "expr": "sort(data_product_slo_compliance_ratio{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"})\nor\nlabel_replace(label_replace(label_replace(label_replace(absent(data_product_slo_compliance_ratio{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}),\"product\",\"No products match filter \u2014 reset to All\",\"\",\"\"),\"portfolio\",\"\u2014\",\"\",\"\"),\"domain\",\"\u2014\",\"\",\"\"),\"owner\",\"Reset filters\",\"\",\"\")",
           "format": "table",
           "instant": true,
           "legendFormat": "",
           "range": false,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus-dev"
-          },
-          "expr": "data_product_health_score{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}",
-          "format": "table",
-          "instant": true,
-          "legendFormat": "",
-          "range": false,
-          "refId": "B"
         }
       ],
       "title": "SLO Compliance \u2014 Ranked",
       "transformations": [
-        {
-          "id": "joinByField",
-          "options": {
-            "byField": "product",
-            "mode": "outer"
-          }
-        },
         {
           "id": "organize",
           "options": {
@@ -1409,10 +1369,16 @@
               "instance": true,
               "job": true
             },
-            "indexByName": {},
+            "indexByName": {
+              "Value": 4,
+              "domain": 2,
+              "owner": 3,
+              "portfolio": 1,
+              "product": 0
+            },
             "renameByName": {
-              "Value #A": "SLO Compliance",
-              "Value #B": "Health Score",
+              "Value": "SLO Compliance",
+              "domain": "Domain",
               "owner": "Owner",
               "portfolio": "Portfolio",
               "product": "Product"
@@ -1718,12 +1684,12 @@
         "type": "prometheus",
         "uid": "prometheus-dev"
       },
-      "description": "Cumulative DQ violations counter. High counts indicate schema drift, null spikes, or contract violations. Reset on product restart.",
+      "description": "Cumulative DQ violation counter. A single \u201cNo DQ violations\u201d row means the current filter scope has no violations recorded.",
       "fieldConfig": {
         "defaults": {
           "custom": {},
           "mappings": [],
-          "noValue": "\u2014",
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1800,7 +1766,7 @@
             "type": "prometheus",
             "uid": "prometheus-dev"
           },
-          "expr": "sort_desc(data_product_dq_violation_total{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"})",
+          "expr": "data_product_dq_violation_total{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}\nor\nlabel_replace(label_replace(label_replace(label_replace(absent(data_product_dq_violation_total{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}),\"product\",\"No DQ violations recorded \u2014 all products clean\",\"\",\"\"),\"portfolio\",\"\u2014\",\"\",\"\"),\"domain\",\"\u2014\",\"\",\"\"),\"owner\",\"\u2014\",\"\",\"\")",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -2076,7 +2042,7 @@
         "type": "prometheus",
         "uid": "prometheus-dev"
       },
-      "description": "Firing alerts scoped to current filter selection. If empty, all products within scope are healthy \u2014 no active incidents.",
+      "description": "Firing Prometheus alerts scoped to selected filters. Green ALL CLEAR row = no active incidents.",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -2124,6 +2090,11 @@
                         "color": "blue",
                         "index": 2,
                         "text": "INFO"
+                      },
+                      "none": {
+                        "color": "green",
+                        "index": 3,
+                        "text": "ALL CLEAR"
                       },
                       "warning": {
                         "color": "yellow",
@@ -2208,7 +2179,7 @@
             "type": "prometheus",
             "uid": "prometheus-dev"
           },
-          "expr": "ALERTS{alertstate=\"firing\",portfolio=~\"$portfolio\",product=~\"$product\"}",
+          "expr": "ALERTS{alertstate=\"firing\",portfolio=~\"$portfolio\",product=~\"$product\"}\nor\nlabel_replace(label_replace(label_replace(label_replace(absent(ALERTS{alertstate=\"firing\",portfolio=~\"$portfolio\",product=~\"$product\"}),\"alertname\",\"No active alerts \u2014 all products healthy\",\"\",\"\"),\"severity\",\"none\",\"\",\"\"),\"product\",\"All products healthy\",\"\",\"\"),\"portfolio\",\"$portfolio\",\"\",\"\")",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -2443,5 +2414,5 @@
   "timezone": "browser",
   "title": "L1 \u2014 Data Product Estate Health",
   "uid": "watch-l1-estate",
-  "version": 14
+  "version": 16
 }
