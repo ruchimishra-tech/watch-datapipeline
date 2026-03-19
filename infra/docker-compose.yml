@@ -146,6 +146,46 @@ services:
       - observability
     restart: unless-stopped
 
+  # ── Pipeline Simulator ─────────────────────────────────────────────────────
+  # Emits real OTel spans (pipeline.run, etl.extract/transform/load) to Tempo
+  # and exposes simulator_pipeline_* Prometheus metrics (scraped at port 8099)
+  pipeline-simulator:
+    build:
+      context: ..
+      dockerfile: simulator/Dockerfile
+    container_name: watch_pipeline_simulator
+    # Default CMD runs the pipeline simulator
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4317
+      - WATCH_DEPLOYMENT_ENVIRONMENT=docker-dev
+      - SIMULATOR_METRICS_PORT=8099
+    ports:
+      - "8099:8099"
+    networks:
+      - observability
+    depends_on:
+      - collector
+    restart: unless-stopped
+
+  # ── Trace Seeder ────────────────────────────────────────────────────────────
+  # One-shot: seeds 40 demo traces into Tempo on first stack start.
+  # Runs fast-mode scenarios (50ms phases) so the L2 dashboard has data
+  # immediately without waiting for the pipeline simulator's full intervals.
+  trace-seeder:
+    build:
+      context: ..
+      dockerfile: simulator/Dockerfile
+    container_name: watch_trace_seeder
+    command: ["python", "-m", "simulator.trace_seeder"]
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4317
+      - WATCH_DEPLOYMENT_ENVIRONMENT=docker-dev
+    networks:
+      - observability
+    depends_on:
+      - collector
+    restart: "no"
+
   # ── Loki ───────────────────────────────────────────────────────────────────
   # Log aggregation — receives logs from pipelines and synthesizer
   loki:

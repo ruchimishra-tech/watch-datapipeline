@@ -1,27 +1,7 @@
 {
-  "__watch_meta": {
-    "tier": "L2",
-    "mandatory_panels": [
-      "runs-table",
-      "trace-waterfall",
-      "phase-detail-table",
-      "root-cause"
-    ],
-    "required_variables": [
-      "environment",
-      "pipeline_id",
-      "trace_id"
-    ],
-    "context_variables": [
-      "portfolio",
-      "product",
-      "domain",
-      "owner"
-    ]
-  },
   "uid": "watch-l2-pipeline",
   "title": "L2 \u2014 Pipeline Observability & Debug",
-  "description": "L2 deep-debug dashboard. Select a pipeline to view all runs. Click a Trace ID to load the full span waterfall, phase breakdown, root cause analysis, DQ events, SLO correlation, and streaming metrics. Navigate from L1 via product drill-down links.",
+  "description": "Deep-debug dashboard. Select Domain \u2192 Pipeline to view runs. Click a Trace ID to load span waterfall, phase breakdown, root cause, and DQ events.",
   "tags": [
     "watch",
     "l2",
@@ -31,7 +11,7 @@
     "slo"
   ],
   "schemaVersion": 38,
-  "version": 11,
+  "version": 13,
   "refresh": "30s",
   "time": {
     "from": "now-24h",
@@ -72,28 +52,6 @@
         "multi": false
       },
       {
-        "name": "portfolio",
-        "label": "Portfolio",
-        "type": "textbox",
-        "current": {
-          "text": "All",
-          "value": "All"
-        },
-        "hide": 0,
-        "description": "Data product portfolio \u2014 passed from L1 for context. Not used to filter pipeline metrics."
-      },
-      {
-        "name": "product",
-        "label": "Data Product",
-        "type": "textbox",
-        "current": {
-          "text": ".*",
-          "value": ".*"
-        },
-        "hide": 0,
-        "description": "Data product name \u2014 passed from L1. Used to correlate SLO/SLI metrics in the lower section."
-      },
-      {
         "name": "domain",
         "label": "Domain",
         "type": "query",
@@ -115,6 +73,28 @@
         "multi": false
       },
       {
+        "name": "product",
+        "label": "Data Product",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus-dev"
+        },
+        "definition": "label_values(data_product_health_score{environment=\"$environment\"}, product)",
+        "query": "label_values(data_product_health_score{environment=\"$environment\"}, product)",
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "multi": false,
+        "description": "Data product for SLO correlation. Pre-set when navigating from L1."
+      },
+      {
         "name": "pipeline_id",
         "label": "Pipeline",
         "type": "query",
@@ -134,7 +114,7 @@
         },
         "hide": 0,
         "multi": false,
-        "description": "Select a pipeline to see its runs. Pre-populated when navigating from L1 via ?var-pipeline_id=..."
+        "description": "Select a pipeline to see its runs and metrics."
       },
       {
         "name": "owner",
@@ -166,25 +146,35 @@
           "value": ""
         },
         "hide": 0,
-        "description": "Auto-populated when you click a run row in the table. You can also paste a Trace ID directly."
+        "description": "Paste or click a Trace ID to load the waterfall below."
+      },
+      {
+        "name": "portfolio",
+        "label": "Portfolio",
+        "type": "textbox",
+        "current": {
+          "text": "All",
+          "value": "All"
+        },
+        "hide": 2,
+        "description": "Context-only: portfolio passed from L1 via URL param."
       }
     ]
   },
   "panels": [
     {
       "id": 50,
-      "uid": "l2-nav",
       "title": "",
       "type": "text",
       "gridPos": {
         "x": 0,
         "y": 0,
         "w": 24,
-        "h": 2
+        "h": 1
       },
       "options": {
-        "mode": "markdown",
-        "content": "### [&#8592; Data Marketplace](/d/marketplace-home?var-environment=${environment}) &nbsp;&#8250;&nbsp; [L1 Estate Health](/d/watch-l1-estate?var-environment=${environment}&var-portfolio=${portfolio}&var-product=${product}) &nbsp;&#8250;&nbsp; **L2 Pipeline Debug** &nbsp;|&nbsp; [L3 Infrastructure &#8594;](/d/watch-l3-infra?var-environment=${environment})\n\n**Context:** Portfolio `${portfolio}` &nbsp;&#183;&nbsp; Product `${product}` &nbsp;&#183;&nbsp; Domain `${domain}` &nbsp;&#183;&nbsp; Pipeline `${pipeline_id}` &nbsp;&#183;&nbsp; Owner `${owner}` &nbsp;&#183;&nbsp; Env `${environment}`\n\n**How to use:** Select a **Pipeline** &#8594; click any **Trace ID** in the runs table &#8594; trace waterfall, phase breakdown, root cause, and DQ events all populate automatically."
+        "mode": "html",
+        "content": "<div style=\"padding:4px 8px;font-size:13px;color:#aaa;\"><a href=\"/d/marketplace-home?var-environment=${environment}\" style=\"color:#5794f2;\">&#8592; Marketplace</a> &nbsp;&#8250;&nbsp; <a href=\"/d/watch-l1-estate?var-environment=${environment}&var-portfolio=${portfolio}&var-product=${product}\" style=\"color:#5794f2;\">L1 Estate Health</a> &nbsp;&#8250;&nbsp; <strong style=\"color:#e0e0e0;\">L2 Pipeline Debug</strong> &nbsp;|&nbsp; <a href=\"/d/watch-l3-infra?var-environment=${environment}\" style=\"color:#5794f2;\">L3 Infrastructure &#8594;</a></div>"
       },
       "transparent": true
     },
@@ -195,7 +185,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 2,
+        "y": 1,
         "w": 24,
         "h": 1
       }
@@ -207,7 +197,7 @@
       "description": "24h success rate for selected pipeline(s).",
       "gridPos": {
         "x": 0,
-        "y": 3,
+        "y": 2,
         "w": 4,
         "h": 4
       },
@@ -276,7 +266,7 @@
       "description": "Total pipeline runs in the last 24 hours.",
       "gridPos": {
         "x": 4,
-        "y": 3,
+        "y": 2,
         "w": 4,
         "h": 4
       },
@@ -336,7 +326,7 @@
       "description": "Failed runs in the last 24 hours.",
       "gridPos": {
         "x": 8,
-        "y": 3,
+        "y": 2,
         "w": 4,
         "h": 4
       },
@@ -404,7 +394,7 @@
       "description": "Duration of the most recent completed run.",
       "gridPos": {
         "x": 12,
-        "y": 3,
+        "y": 2,
         "w": 4,
         "h": 4
       },
@@ -462,7 +452,7 @@
           },
           "refId": "A",
           "instant": true,
-          "expr": "max(simulator_pipeline_last_duration_seconds{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}) "
+          "expr": "max(simulator_pipeline_last_duration_seconds{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"})"
         }
       ]
     },
@@ -470,10 +460,10 @@
       "id": 23,
       "type": "stat",
       "title": "SLA Breaches (24h)",
-      "description": "Runs that breached SLA (approximated by failure count).",
+      "description": "Runs that breached SLA threshold.",
       "gridPos": {
         "x": 16,
-        "y": 3,
+        "y": 2,
         "w": 4,
         "h": 4
       },
@@ -530,18 +520,18 @@
           },
           "refId": "A",
           "instant": true,
-          "expr": "sum(increase(simulator_pipeline_runs_total{status=\"failed\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h])) or vector(0)"
+          "expr": "sum(increase(simulator_sla_breaches_total{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[24h])) or vector(0)"
         }
       ]
     },
     {
       "id": 24,
       "type": "stat",
-      "title": "Failure Rate Trend",
-      "description": "6h rolling failure rate. Rising trend = degrading pipeline reliability.",
+      "title": "Failure Rate (6h)",
+      "description": "6h rolling failure rate.",
       "gridPos": {
         "x": 20,
-        "y": 3,
+        "y": 2,
         "w": 4,
         "h": 4
       },
@@ -606,11 +596,11 @@
     {
       "id": 201,
       "type": "row",
-      "title": "PERFORMANCE TRENDS \u2014 24h",
+      "title": "PERFORMANCE TRENDS",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 7,
+        "y": 6,
         "w": 24,
         "h": 1
       }
@@ -618,11 +608,11 @@
     {
       "id": 26,
       "type": "timeseries",
-      "title": "Run Success / Failure Rate \u2014 30m window",
+      "title": "Run Rate \u2014 Success vs Failure",
       "description": "Run throughput rate. Failures spike on intermittent or systematic issues.",
       "gridPos": {
         "x": 0,
-        "y": 8,
+        "y": 7,
         "w": 12,
         "h": 8
       },
@@ -662,7 +652,7 @@
           },
           "refId": "A",
           "expr": "sum(rate(simulator_pipeline_runs_total{status=\"success\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[30m])) * 60",
-          "legendFormat": "Success / min"
+          "legendFormat": "\u2713 Success / min"
         },
         {
           "datasource": {
@@ -671,18 +661,18 @@
           },
           "refId": "B",
           "expr": "sum(rate(simulator_pipeline_runs_total{status=\"failed\", pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}[30m])) * 60",
-          "legendFormat": "Failure / min"
+          "legendFormat": "\u2717 Failure / min"
         }
       ]
     },
     {
       "id": 27,
       "type": "timeseries",
-      "title": "Pipeline Duration \u2014 Last Observed",
-      "description": "Last observed run duration per pipeline. Sustained growth = performance regression or data volume increase.",
+      "title": "Pipeline Duration \u2014 per Run",
+      "description": "Last observed run duration per pipeline. Sustained growth = performance regression.",
       "gridPos": {
         "x": 12,
-        "y": 8,
+        "y": 7,
         "w": 12,
         "h": 8
       },
@@ -742,31 +732,31 @@
           },
           "refId": "A",
           "expr": "simulator_pipeline_last_duration_seconds{pipeline_id=~\"$pipeline_id\", environment=\"$environment\"}",
-          "legendFormat": "{{pipeline_id}} \u2014 {{pipeline_name}}"
+          "legendFormat": "{{pipeline_id}}"
         }
       ]
     },
     {
       "id": 202,
       "type": "row",
-      "title": "PIPELINE RUNS \u2014 Click any Trace ID to drill into that run",
+      "title": "PIPELINE RUNS \u2014 Click a Trace ID to drill into that run",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 16,
+        "y": 15,
         "w": 24,
         "h": 1
       }
     },
     {
       "id": 1,
-      "uid": "runs-table",
-      "title": "Pipeline Runs \u2014 Click Trace ID to load trace detail",
-      "description": "All runs for the selected pipeline(s), queried live from Tempo. Click a **Trace ID** to populate the waterfall, phase breakdown, root cause, and DQ panels below. Failed runs shown in red.",
+      "title": "Pipeline Runs",
+      "description": "All runs for selected pipeline(s) queried from Tempo. Click a Trace ID row to load the waterfall below.",
       "type": "table",
+      "transparent": false,
       "gridPos": {
         "x": 0,
-        "y": 17,
+        "y": 16,
         "w": 24,
         "h": 11
       },
@@ -784,13 +774,16 @@
             "desc": true
           }
         ],
-        "cellHeight": "sm"
+        "cellHeight": "sm",
+        "frameIndex": 0
       },
       "fieldConfig": {
         "defaults": {
           "custom": {
             "align": "left",
-            "filterable": true
+            "filterable": true,
+            "displayMode": "auto",
+            "inspect": false
           },
           "noValue": "\u2014"
         },
@@ -811,13 +804,24 @@
               },
               {
                 "id": "custom.width",
-                "value": 240
+                "value": 250
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-blue",
+                  "mode": "fixed"
+                }
               },
               {
                 "id": "links",
                 "value": [
                   {
-                    "title": "Load this run \u2192",
+                    "title": "Load trace \u2192",
                     "url": "/d/watch-l2-pipeline?var-environment=${environment}&var-pipeline_id=${pipeline_id}&var-domain=${domain}&var-product=${product}&var-portfolio=${portfolio}&var-trace_id=${__value.raw}",
                     "targetBlank": false
                   }
@@ -837,7 +841,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 210
               }
             ]
           },
@@ -853,14 +857,11 @@
               },
               {
                 "id": "custom.width",
-                "value": 105
+                "value": 110
               },
               {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background",
-                  "mode": "basic"
-                }
+                "id": "custom.displayMode",
+                "value": "color-background"
               },
               {
                 "id": "mappings",
@@ -921,7 +922,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 85
+                "value": 90
               }
             ]
           },
@@ -937,7 +938,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 180
+                "value": 185
               }
             ]
           }
@@ -988,41 +989,24 @@
     {
       "id": 203,
       "type": "row",
-      "title": "TRACE DETAIL \u2014 ${trace_id}",
+      "title": "TRACE DETAIL \u2014 ${trace_id}   \u00b7   \u2191 Select a run above to populate this section",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 28,
+        "y": 27,
         "w": 24,
         "h": 1
       }
     },
     {
-      "id": 51,
-      "uid": "trace-hint",
-      "title": "",
-      "type": "text",
-      "gridPos": {
-        "x": 0,
-        "y": 29,
-        "w": 24,
-        "h": 2
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "> **Selected run:** `${trace_id}`  \u2003Click a **Trace ID** in the table above to load the waterfall, phase breakdown, root cause, and DQ events. Panels show \u201cNo data\u201d until a trace is selected."
-      },
-      "transparent": true
-    },
-    {
       "id": 2,
-      "uid": "trace-waterfall",
       "title": "Span Waterfall \u2014 Extract \u2192 Transform \u2192 Load",
-      "description": "Full trace waterfall for the selected run. Each span shows stage name, duration, and status. Red spans = failed stage. Click any span bar to see all attributes: row counts, transform operations, source/target systems, error message.",
+      "description": "Full trace waterfall for the selected run. Red spans = failed stage. Click any span bar to see attributes: row counts, operations, source/target, error message.",
       "type": "traces",
+      "transparent": false,
       "gridPos": {
         "x": 0,
-        "y": 31,
+        "y": 28,
         "w": 24,
         "h": 14
       },
@@ -1047,15 +1031,15 @@
     },
     {
       "id": 3,
-      "uid": "phase-detail-table",
       "title": "Phase Spans \u2014 Duration & Status",
-      "description": "One row per ETL phase (extract, transform, load). Duration in ms. ERROR status = this phase caused the failure. Check pipeline.failure_reason on the failed span.",
+      "description": "One row per ETL phase. ERROR status = this phase caused the failure.",
       "type": "table",
+      "transparent": false,
       "gridPos": {
         "x": 0,
-        "y": 45,
+        "y": 42,
         "w": 14,
-        "h": 8
+        "h": 9
       },
       "datasource": {
         "type": "tempo",
@@ -1076,7 +1060,8 @@
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "align": "left"
+            "align": "left",
+            "displayMode": "auto"
           },
           "noValue": "\u2014"
         },
@@ -1096,11 +1081,8 @@
                 "value": 90
               },
               {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background",
-                  "mode": "basic"
-                }
+                "id": "custom.displayMode",
+                "value": "color-background"
               },
               {
                 "id": "mappings",
@@ -1247,15 +1229,15 @@
     },
     {
       "id": 30,
-      "uid": "root-cause",
       "title": "Root Cause Summary",
-      "description": "Shows spans with ERROR status for the selected trace. pipeline.failure_reason gives the exact error. pipeline.failure_phase identifies the stage. If empty, all spans completed successfully.",
+      "description": "Spans with ERROR status. Empty = all phases succeeded.",
       "type": "table",
+      "transparent": false,
       "gridPos": {
         "x": 14,
-        "y": 45,
+        "y": 42,
         "w": 10,
-        "h": 8
+        "h": 9
       },
       "datasource": {
         "type": "tempo",
@@ -1271,7 +1253,8 @@
         "defaults": {
           "custom": {
             "align": "left",
-            "wrap": true
+            "wrap": true,
+            "displayMode": "auto"
           },
           "noValue": "\u2014"
         },
@@ -1291,11 +1274,8 @@
                 "value": 80
               },
               {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background",
-                  "mode": "basic"
-                }
+                "id": "custom.displayMode",
+                "value": "color-background"
               },
               {
                 "id": "mappings",
@@ -1332,11 +1312,11 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Span"
+                "value": "Failed Span"
               },
               {
                 "id": "custom.width",
-                "value": 130
+                "value": 150
               }
             ]
           }
@@ -1407,20 +1387,20 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 53,
+        "y": 51,
         "w": 24,
         "h": 1
       }
     },
     {
       "id": 4,
-      "uid": "dq-events-table",
       "title": "DQ Events \u2014 Extract Phase",
-      "description": "DQ check events emitted on the etl.extract span. Shows rule name, severity, and affected records. Empty = no DQ events recorded for this run.",
+      "description": "DQ check events on the etl.extract span. Empty = no DQ events for this run.",
       "type": "table",
+      "transparent": false,
       "gridPos": {
         "x": 0,
-        "y": 54,
+        "y": 52,
         "w": 24,
         "h": 7
       },
@@ -1437,7 +1417,8 @@
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "align": "left"
+            "align": "left",
+            "displayMode": "auto"
           },
           "noValue": "\u2014"
         },
@@ -1454,14 +1435,11 @@
               },
               {
                 "id": "custom.width",
-                "value": 95
+                "value": 100
               },
               {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background",
-                  "mode": "basic"
-                }
+                "id": "custom.displayMode",
+                "value": "color-background"
               },
               {
                 "id": "mappings",
@@ -1588,11 +1566,11 @@
     {
       "id": 205,
       "type": "row",
-      "title": "SLO / SLI CORRELATION \u2014 Data Product: ${product}",
+      "title": "SLO \u2014 Data Product: ${product}",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 61,
+        "y": 59,
         "w": 24,
         "h": 1
       }
@@ -1601,10 +1579,10 @@
       "id": 40,
       "type": "stat",
       "title": "SLO Compliance",
-      "description": "Rolling SLO compliance for the associated data product. Breach = pipeline is contributing to SLO miss.",
+      "description": "Rolling SLO compliance for the associated data product.",
       "gridPos": {
         "x": 0,
-        "y": 62,
+        "y": 60,
         "w": 5,
         "h": 4
       },
@@ -1670,10 +1648,10 @@
       "id": 41,
       "type": "stat",
       "title": "Health Score",
-      "description": "Composite health score for the data product (availability 35%, latency 25%, freshness 25%, error rate 15%).",
+      "description": "Composite health score for the data product.",
       "gridPos": {
         "x": 5,
-        "y": 62,
+        "y": 60,
         "w": 4,
         "h": 4
       },
@@ -1739,10 +1717,10 @@
       "id": 42,
       "type": "stat",
       "title": "Error Rate",
-      "description": "Current error rate for the data product. >2% = warning, >10% = critical.",
+      "description": "Current error rate for the data product.",
       "gridPos": {
         "x": 9,
-        "y": 62,
+        "y": 60,
         "w": 4,
         "h": 4
       },
@@ -1808,10 +1786,10 @@
       "id": 43,
       "type": "stat",
       "title": "Data Freshness",
-      "description": "Seconds since last successful data refresh. High value = stale data reaching consumers.",
+      "description": "Seconds since last successful data refresh.",
       "gridPos": {
         "x": 13,
-        "y": 62,
+        "y": 60,
         "w": 5,
         "h": 4
       },
@@ -1877,10 +1855,10 @@
       "id": 44,
       "type": "stat",
       "title": "Error Budget %",
-      "description": "Percentage of 1% error budget remaining. 0% = budget fully exhausted, pipeline must not introduce further failures.",
+      "description": "Percentage of 1% error budget remaining.",
       "gridPos": {
         "x": 18,
-        "y": 62,
+        "y": 60,
         "w": 6,
         "h": 4
       },
@@ -1945,11 +1923,11 @@
     {
       "id": 206,
       "type": "row",
-      "title": "STREAMING METRICS \u2014 Kafka / Real-time Pipelines",
+      "title": "STREAMING METRICS \u2014 Kafka",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 66,
+        "y": 64,
         "w": 24,
         "h": 1
       }
@@ -1958,10 +1936,10 @@
       "id": 50,
       "type": "timeseries",
       "title": "Consumer Lag \u2014 Per Topic",
-      "description": "Kafka consumer lag per topic. Sustained high lag = processing bottleneck or consumer slowdown. Spike = backpressure event.",
+      "description": "Kafka consumer lag per topic. Sustained high lag = processing bottleneck.",
       "gridPos": {
         "x": 0,
-        "y": 67,
+        "y": 65,
         "w": 8,
         "h": 8
       },
@@ -2008,11 +1986,11 @@
     {
       "id": 51,
       "type": "timeseries",
-      "title": "Throughput \u2014 Messages / sec",
-      "description": "Message processing throughput per topic. Drop in throughput with rising lag = consumer health issue.",
+      "title": "Throughput \u2014 Msg/sec",
+      "description": "Message processing throughput per topic.",
       "gridPos": {
         "x": 8,
-        "y": 67,
+        "y": 65,
         "w": 8,
         "h": 8
       },
@@ -2060,10 +2038,10 @@
       "id": 52,
       "type": "timeseries",
       "title": "End-to-End Latency \u2014 ms",
-      "description": "End-to-end processing latency from produce to consume. Correlates with SLO latency SLI on the data product.",
+      "description": "End-to-end processing latency from produce to consume.",
       "gridPos": {
         "x": 16,
-        "y": 67,
+        "y": 65,
         "w": 8,
         "h": 8
       },
@@ -2110,24 +2088,24 @@
     {
       "id": 207,
       "type": "row",
-      "title": "LOGS \u2014 Trace-Correlated (Loki)",
+      "title": "LOGS \u2014 Loki",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 75,
+        "y": 73,
         "w": 24,
         "h": 1
       }
     },
     {
       "id": 60,
-      "uid": "pipeline-logs",
-      "title": "Pipeline Logs \u2014 Filtered by Pipeline & Trace",
-      "description": "Loki logs for the selected pipeline. When a trace_id is selected, logs are further filtered to that run. Currently empty: log shipping to Loki not yet configured in the simulator. This panel is ready for production log integration.",
+      "title": "Pipeline Logs",
+      "description": "Loki logs filtered by pipeline. Set trace_id to narrow to a single run.",
       "type": "logs",
+      "transparent": false,
       "gridPos": {
         "x": 0,
-        "y": 76,
+        "y": 74,
         "w": 24,
         "h": 9
       },
@@ -2159,25 +2137,24 @@
     },
     {
       "id": 70,
-      "uid": "l2-nav-footer",
       "title": "",
       "type": "text",
       "gridPos": {
         "x": 0,
-        "y": 85,
+        "y": 83,
         "w": 24,
         "h": 3
       },
       "options": {
         "mode": "markdown",
-        "content": "#### Quick Navigation\n| Destination | Link |\n|---|---|\n| Data Marketplace Home | [Open](/d/marketplace-home?var-environment=${environment}) |\n| L1 Estate Health (SLO overview) | [Open](/d/watch-l1-estate?var-environment=${environment}&var-portfolio=${portfolio}&var-product=${product}) |\n| L3 Infrastructure | [Open](/d/watch-l3-infra?var-environment=${environment}) |\n| Trace Explorer (Tempo) | [Open in Explore](/explore?left=%7B%22datasource%22:%22tempo-dev%22%7D) |\n\n**Drill-down path:** Run \u2192 Trace ID \u2192 Span Waterfall \u2192 Phase Detail \u2192 Root Cause \u2192 DQ Events \u2192 Logs"
+        "content": "#### Quick Navigation\n| Destination | Link |\n|---|---|\n| Data Marketplace Home | [Open](/d/marketplace-home?var-environment=${environment}) |\n| L1 Estate Health | [Open](/d/watch-l1-estate?var-environment=${environment}&var-portfolio=${portfolio}&var-product=${product}) |\n| L3 Infrastructure | [Open](/d/watch-l3-infra?var-environment=${environment}) |\n| Trace Explorer (Tempo) | [Open in Explore](/explore?left=%7B%22datasource%22:%22tempo-dev%22%7D) |\n\n**Drill-down path:** Domain \u2192 Pipeline \u2192 Run \u2192 Trace ID \u2192 Span Waterfall \u2192 Phase Detail \u2192 Root Cause \u2192 DQ Events"
       },
       "transparent": true
     }
   ],
   "links": [
     {
-      "title": "\u2190 Homepage",
+      "title": "\u2190 Marketplace",
       "url": "/d/marketplace-home?var-environment=${environment}",
       "targetBlank": false
     },
