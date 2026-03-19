@@ -54,6 +54,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -113,6 +114,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -180,6 +182,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -248,6 +251,7 @@
           },
           "decimals": 3,
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -296,7 +300,7 @@
             "type": "prometheus",
             "uid": "prometheus-dev"
           },
-          "expr": "avg(data_product_slo_compliance_ratio{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"})",
+          "expr": "avg(data_product_slo_compliance_ratio{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}) or vector(0)",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -316,6 +320,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -383,6 +388,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -431,7 +437,7 @@
             "type": "prometheus",
             "uid": "prometheus-dev"
           },
-          "expr": "sum(data_product_dq_violation_total{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"})",
+          "expr": "sum(data_product_dq_violation_total{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}) or vector(0)",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -452,6 +458,7 @@
           },
           "decimals": 2,
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -500,7 +507,7 @@
             "type": "prometheus",
             "uid": "prometheus-dev"
           },
-          "expr": "avg(data_product_health_score{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"})",
+          "expr": "avg(data_product_health_score{environment=\"$environment\",portfolio=~\"$portfolio\",product=~\"$product\",owner=~\"$owner\"}) or vector(0)",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -521,6 +528,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -574,7 +582,7 @@
           "refId": "A"
         }
       ],
-      "title": "Error Budget Exhausted",
+      "title": "Budget Exhausted",
       "type": "stat"
     },
     {
@@ -600,6 +608,7 @@
         "defaults": {
           "custom": {},
           "mappings": [],
+          "noValue": "\u2014",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1241,6 +1250,7 @@
         "defaults": {
           "custom": {},
           "mappings": [],
+          "noValue": "\u2014",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1380,7 +1390,7 @@
           "refId": "B"
         }
       ],
-      "title": "SLO Compliance \u2014 All Products",
+      "title": "SLO Compliance \u2014 Ranked",
       "transformations": [
         {
           "id": "joinByField",
@@ -1438,6 +1448,7 @@
           "mappings": [],
           "max": 100,
           "min": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1492,7 +1503,7 @@
           "refId": "A"
         }
       ],
-      "title": "Error Budget Remaining \u2014 Per Product",
+      "title": "Error Budget Remaining",
       "type": "bargauge"
     },
     {
@@ -1518,6 +1529,7 @@
         "defaults": {
           "custom": {},
           "mappings": [],
+          "noValue": "\u2014",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1640,7 +1652,7 @@
           "refId": "A"
         }
       ],
-      "title": "SLI Breakdown \u2014 All Products \u00d7 All Dimensions",
+      "title": "SLI Breakdown \u2014 Per Product \u00d7 Dimension",
       "transformations": [
         {
           "id": "organize",
@@ -1711,6 +1723,7 @@
         "defaults": {
           "custom": {},
           "mappings": [],
+          "noValue": "\u2014",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1795,7 +1808,7 @@
           "refId": "A"
         }
       ],
-      "title": "Data Quality Violations \u2014 Per Product",
+      "title": "DQ Violations",
       "transformations": [
         {
           "id": "organize",
@@ -1888,7 +1901,7 @@
           "refId": "A"
         }
       ],
-      "title": "Data Volume \u2014 Records/hr",
+      "title": "Volume \u2014 Records/hr",
       "type": "timeseries"
     },
     {
@@ -1972,7 +1985,7 @@
           "refId": "A"
         }
       ],
-      "title": "SLO Compliance \u2014 24h Trend",
+      "title": "SLO Compliance \u2014 24h",
       "type": "timeseries"
     },
     {
@@ -2042,7 +2055,7 @@
           "refId": "A"
         }
       ],
-      "title": "Error Rate \u2014 24h Trend",
+      "title": "Error Rate \u2014 24h",
       "type": "timeseries"
     },
     {
@@ -2063,11 +2076,12 @@
         "type": "prometheus",
         "uid": "prometheus-dev"
       },
-      "description": "Live Prometheus ALERTS for firing state only. Empty = all products within scope are healthy.",
+      "description": "Firing alerts scoped to current filter selection. If empty, all products within scope are healthy \u2014 no active incidents.",
       "fieldConfig": {
         "defaults": {
           "custom": {},
           "mappings": [],
+          "noValue": "\u2014",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -2185,6 +2199,7 @@
         "footer": {
           "show": false
         },
+        "noValue": "No active alerts",
         "showHeader": true
       },
       "targets": [
@@ -2201,7 +2216,7 @@
           "refId": "A"
         }
       ],
-      "title": "Firing Alerts \u2014 Scoped to Selected Products",
+      "title": "Firing Alerts",
       "transformations": [
         {
           "id": "organize",
@@ -2428,5 +2443,5 @@
   "timezone": "browser",
   "title": "L1 \u2014 Data Product Estate Health",
   "uid": "watch-l1-estate",
-  "version": 12
+  "version": 14
 }

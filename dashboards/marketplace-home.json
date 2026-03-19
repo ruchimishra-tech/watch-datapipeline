@@ -10,7 +10,7 @@
       },
       "id": 1,
       "options": {
-        "content": "# Data Marketplace &nbsp;·&nbsp; Observability Platform\n\nReal-time health across all data products &mdash; **SLA compliance** &nbsp;·&nbsp; **freshness** &nbsp;·&nbsp; **availability** &nbsp;·&nbsp; **active incidents**.\n\nFilter by **Environment · Portfolio · Domain · Owner** above &nbsp;·&nbsp; Drill down: click any portfolio or product name &nbsp;·&nbsp; Red = action needed now.",
+        "content": "# Data Marketplace &nbsp;\u00b7&nbsp; Observability Platform\n\nReal-time health across all data products &mdash; **SLA compliance** &nbsp;\u00b7&nbsp; **freshness** &nbsp;\u00b7&nbsp; **availability** &nbsp;\u00b7&nbsp; **active incidents**.\n\nFilter by **Environment \u00b7 Portfolio \u00b7 Domain \u00b7 Owner** above &nbsp;\u00b7&nbsp; Drill down: click any portfolio or product name &nbsp;\u00b7&nbsp; Red = action needed now.",
         "mode": "markdown"
       },
       "title": "",
@@ -26,6 +26,7 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -48,6 +49,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "noValue": "0",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -77,10 +79,11 @@
         "type": "prometheus",
         "uid": "prometheus-dev"
       },
-      "description": "Products with health score ≥ 95%.",
+      "description": "Products with health score \u2265 95%.",
       "fieldConfig": {
         "defaults": {
           "decimals": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -103,6 +106,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "noValue": "0",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -131,10 +135,11 @@
         "type": "prometheus",
         "uid": "prometheus-dev"
       },
-      "description": "Products with health score between 75% and 95% — watch closely.",
+      "description": "Products with health score between 75% and 95% \u2014 watch closely.",
       "fieldConfig": {
         "defaults": {
           "decimals": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -161,6 +166,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "noValue": "0",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -189,10 +195,11 @@
         "type": "prometheus",
         "uid": "prometheus-dev"
       },
-      "description": "Products with health score below 75% — immediate attention required.",
+      "description": "Products with health score below 75% \u2014 immediate attention required.",
       "fieldConfig": {
         "defaults": {
           "decimals": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -223,6 +230,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "noValue": "0",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -255,6 +263,7 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -285,6 +294,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "area",
+        "noValue": "0",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -317,6 +327,7 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -347,6 +358,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "noValue": "0",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -379,6 +391,7 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -409,6 +422,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "noValue": "0",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -454,7 +468,8 @@
         "defaults": {
           "custom": {
             "align": "auto"
-          }
+          },
+          "noValue": "\u2014"
         },
         "overrides": [
           {
@@ -762,7 +777,7 @@
         "type": "prometheus",
         "uid": "prometheus-dev"
       },
-      "description": "Average health score per portfolio. Green ≥ 95% · Yellow ≥ 75% · Red < 75%.",
+      "description": "Average health score per portfolio. Green \u2265 95% \u00b7 Yellow \u2265 75% \u00b7 Red < 75%.",
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
@@ -848,7 +863,8 @@
           "custom": {
             "align": "auto",
             "filterable": true
-          }
+          },
+          "noValue": "\u2014"
         },
         "overrides": [
           {
@@ -1128,7 +1144,7 @@
           "refId": "C"
         }
       ],
-      "title": "Data Product Catalog — worst health first",
+      "title": "Data Product Catalog \u2014 worst health first",
       "transformations": [
         {
           "id": "joinByField",
@@ -1181,7 +1197,7 @@
         "y": 30
       },
       "id": 102,
-      "title": "HEALTH HEATMAP — Product × Dimension",
+      "title": "HEALTH HEATMAP \u2014 Product \u00d7 Dimension",
       "type": "row"
     },
     {
@@ -1194,7 +1210,8 @@
         "defaults": {
           "custom": {
             "align": "center"
-          }
+          },
+          "noValue": "\u2014"
         },
         "overrides": [
           {
@@ -1493,7 +1510,7 @@
           "refId": "D"
         }
       ],
-      "title": "Health Heatmap — Availability · Latency p95 · Freshness · Error Rate",
+      "title": "Health Heatmap \u2014 Availability \u00b7 Latency p95 \u00b7 Freshness \u00b7 Error Rate",
       "transformations": [
         {
           "id": "joinByField",
@@ -1583,6 +1600,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "noValue": "0",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1644,6 +1662,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "noValue": "0",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1705,6 +1724,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "noValue": "0",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1739,7 +1759,7 @@
       },
       "id": 23,
       "options": {
-        "content": "**All Clear** — No critical alerts firing &nbsp;·&nbsp; Last evaluated: every 30s\n\nStat panels above always show the live count. Table below lists each firing alert with full context. When no alerts are firing, all three counters read **0** and the table is intentionally empty.",
+        "content": "**All Clear** \u2014 No critical alerts firing &nbsp;\u00b7&nbsp; Last evaluated: every 30s\n\nStat panels above always show the live count. Table below lists each firing alert with full context. When no alerts are firing, all three counters read **0** and the table is intentionally empty.",
         "mode": "markdown"
       },
       "title": "System Status",
@@ -1758,7 +1778,7 @@
           "custom": {
             "align": "left"
           },
-          "noValue": "—"
+          "noValue": "\u2014"
         },
         "overrides": [
           {
@@ -1905,7 +1925,7 @@
           "refId": "A"
         }
       ],
-      "title": "Firing Alerts — detail",
+      "title": "Firing Alerts \u2014 detail",
       "transformations": [
         {
           "id": "organize",
@@ -1945,7 +1965,7 @@
       },
       "id": 15,
       "options": {
-        "content": "## Observability Dashboards\n\n- [L1 — Estate Health →](/d/watch-l1-estate)\n- [L2 — Pipeline Run Detail →](/d/watch-l2-pipeline)\n- [L2 — Streaming Health →](/d/watch-l2-streaming)\n- [L3 — Infrastructure →](/d/watch-l3-infra)\n\n## Investigate\n\n- [Prometheus Alerts →](http://localhost:9090/alerts)\n- [Alertmanager →](http://localhost:9093)\n\n## Runbooks\n\n- [Payments Settlement Batch Failure](#)\n- [Fraud Detection Latency Spike](#)\n- [AML Scan Delay — Weekly Batch](#)\n- [SLO Burn Rate Alert Response](#)\n- [Model Drift — Transaction Risk Scoring](#)",
+        "content": "## Observability Dashboards\n\n- [L1 \u2014 Estate Health \u2192](/d/watch-l1-estate)\n- [L2 \u2014 Pipeline Run Detail \u2192](/d/watch-l2-pipeline)\n- [L2 \u2014 Streaming Health \u2192](/d/watch-l2-streaming)\n- [L3 \u2014 Infrastructure \u2192](/d/watch-l3-infra)\n\n## Investigate\n\n- [Prometheus Alerts \u2192](http://localhost:9090/alerts)\n- [Alertmanager \u2192](http://localhost:9093)\n\n## Runbooks\n\n- [Payments Settlement Batch Failure](#)\n- [Fraud Detection Latency Spike](#)\n- [AML Scan Delay \u2014 Weekly Batch](#)\n- [SLO Burn Rate Alert Response](#)\n- [Model Drift \u2014 Transaction Risk Scoring](#)",
         "mode": "markdown"
       },
       "title": "Navigation & Runbooks",
@@ -2093,7 +2113,7 @@
     "to": "now"
   },
   "timepicker": {},
-  "title": "Data Marketplace — Observability Platform",
+  "title": "Data Marketplace \u2014 Observability Platform",
   "uid": "marketplace-home",
-  "version": 8
+  "version": 10
 }
