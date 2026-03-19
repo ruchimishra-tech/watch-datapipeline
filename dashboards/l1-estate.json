@@ -1742,7 +1742,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "value_and_name"
+        "textMode": "value"
       },
       "targets": [
         {
@@ -1821,7 +1821,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "value_and_name"
+        "textMode": "value"
       },
       "targets": [
         {
@@ -2622,5 +2622,5 @@
   "timezone": "browser",
   "title": "L1 \u2014 Data Product Estate Health",
   "uid": "watch-l1-estate",
-  "version": 18
+  "version": 20
 }
