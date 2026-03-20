@@ -13,3 +13,8 @@ venv/
 .claude/
 *.db
 *.sqlite
+
+# Word/Office temp and lock files
+~$*
+*.tmp
+~WRL*.tmp
